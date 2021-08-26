@@ -26,6 +26,15 @@ module Wads
     COLOR_FORM_BUTTON = Gosu::Color.argb(0xcc2e4053)
     COLOR_ERROR_CODE_RED = Gosu::Color.argb(0xffe6b0aa)
 
+    Z_ORDER_BACKGROUND = 2
+    Z_ORDER_WIDGET_BORDER = 3
+    Z_ORDER_GRAPHIC_ELEMENTS = 4
+    Z_ORDER_SELECTION_BACKGROUND = 5
+    Z_ORDER_PLOT_POINTS = 6
+    Z_ORDER_OVERLAY_BACKGROUND = 7
+    Z_ORDER_OVERLAY_ELEMENTS = 8
+    Z_ORDER_TEXT = 10
+
     class Widget 
         attr_accessor :x
         attr_accessor :y 
@@ -89,7 +98,7 @@ module Wads
             if @visible 
                 render
                 if @background_color
-                    Gosu::draw_rect(@x + 1, @y + 1, @width - 1, @height - 1, @background_color, 2) 
+                    draw_background
                 end
                 if @border_color 
                     draw_border(@border_color)
@@ -98,6 +107,10 @@ module Wads
                     child.draw 
                 end 
             end 
+        end
+
+        def draw_background 
+            Gosu::draw_rect(@x + 1, @y + 1, @width - 1, @height - 1, @background_color, Z_ORDER_BACKGROUND) 
         end
 
         def render 
@@ -110,10 +123,10 @@ module Wads
             if color.nil? 
                 color = @color 
             end
-            Gosu::draw_line @x, @y, color, right_edge, @y, color, 12
-            Gosu::draw_line @x, @y, color, @x, bottom_edge, color, 12
-            Gosu::draw_line @x,bottom_edge, color, right_edge, bottom_edge, color, 12
-            Gosu::draw_line right_edge, @y, color, right_edge, bottom_edge, color, 12
+            Gosu::draw_line @x, @y, color, right_edge, @y, color, Z_ORDER_WIDGET_BORDER
+            Gosu::draw_line @x, @y, color, @x, bottom_edge, color, Z_ORDER_WIDGET_BORDER
+            Gosu::draw_line @x,bottom_edge, color, right_edge, bottom_edge, color, Z_ORDER_WIDGET_BORDER
+            Gosu::draw_line right_edge, @y, color, right_edge, bottom_edge, color, Z_ORDER_WIDGET_BORDER
         end
 
         def contains_click(mouse_x, mouse_y)
@@ -129,7 +142,7 @@ module Wads
             @str = str
         end
         def render 
-            @font.draw_text(@str, @x, @y, 10, 1, 1, @color)
+            @font.draw_text(@str, @x, @y, Z_ORDER_TEXT, 1, 1, @color)
         end
     end 
 
@@ -153,7 +166,7 @@ module Wads
             @half_size = @data_point_size / 2
             Gosu::draw_rect(@x - @half_size, @y - @half_size,
                             @data_point_size, @data_point_size,
-                            @color, 2) 
+                            @color, Z_ORDER_PLOT_POINTS) 
         end 
 
         def to_display 
@@ -193,7 +206,7 @@ module Wads
         def render 
             draw_border(COLOR_WHITE)
             text_x = center_x - (@text_pixel_width / 2)
-            @font.draw_text(@label, text_x, @y, 10, 1, 1, @text_color)
+            @font.draw_text(@label, text_x, @y, Z_ORDER_TEXT, 1, 1, @text_color)
         end 
     end 
 
@@ -210,7 +223,7 @@ module Wads
         def render 
             y = @y + 4
             @lines.each do |line|
-                @font.draw_text(line, @x + 5, y, 10, 1, 1, COLOR_WHITE)
+                @font.draw_text(line, @x + 5, y, Z_ORDER_TEXT, 1, 1, COLOR_WHITE)
                 y = y + 26
             end
         end 
@@ -368,7 +381,7 @@ module Wads
         end
 
         def render
-            Gosu::draw_line x, y, @color, x2, y2, @color
+            Gosu::draw_line x, y, @color, x2, y2, @color, Z_ORDER_GRAPHIC_ELEMENTS
         end
     end 
 
@@ -397,7 +410,7 @@ module Wads
         def render
             text_pixel_width = @font.text_width(@label)
             Gosu::draw_line @x - 20, @y, @color,
-                            @x, @y, @color
+                            @x, @y, @color, Z_ORDER_GRAPHIC_ELEMENTS
             
             @font.draw_text(@label, @x - text_pixel_width - 28, @y - 12, 1, 1, 1, @color)
         end
@@ -415,7 +428,7 @@ module Wads
         def render
             text_pixel_width = @font.text_width(@label)
             Gosu::draw_line @x, @y, @color, @x, @y + 20, @color
-            @font.draw_text(@label, @x - (text_pixel_width / 2), @y + 26, 1, 1, 1, @color)
+            @font.draw_text(@label, @x - (text_pixel_width / 2), @y + 26, Z_ORDER_TEXT, 1, 1, @color)
         end
     end 
 
@@ -483,14 +496,14 @@ module Wads
             if number_of_columns > 1
                 (0..number_of_columns-2).each do |c| 
                     x = x + column_widths[c] + 20
-                    Gosu::draw_line x, @y, @color, x, @y + @height, @color, 20
+                    Gosu::draw_line x, @y, @color, x, @y + @height, @color, Z_ORDER_GRAPHIC_ELEMENTS
                 end 
             end
 
             y = @y             
             x = @x + 20
             (0..number_of_columns-1).each do |c| 
-                @font.draw_text(@headers[c], x, y, 20, 1, 1, @color)
+                @font.draw_text(@headers[c], x, y, Z_ORDER_TEXT, 1, 1, @color)
                 x = x + column_widths[c] + 20
             end
             y = y + 30
@@ -502,7 +515,7 @@ module Wads
                 elsif count < @current_row + @max_visible_rows
                     x = @x + 20
                     (0..number_of_columns-1).each do |c| 
-                        @font.draw_text(row[c], x, y + 2, 20, 1, 1, @row_colors[count])
+                        @font.draw_text(row[c], x, y + 2, Z_ORDER_TEXT, 1, 1, @row_colors[count])
                         x = x + column_widths[c] + 20
                     end
                     y = y + 30
@@ -543,7 +556,7 @@ module Wads
             if @selected_row 
                 if @selected_row >= @current_row and @selected_row < @current_row + @max_visible_rows
                     y = @y + 30 + ((@selected_row - @current_row) * 30)
-                    Gosu::draw_rect(@x + 20, y, @width - 30, 28, @selected_color, 19) 
+                    Gosu::draw_rect(@x + 20, y, @width - 30, 28, @selected_color, Z_ORDER_SELECTION_BACKGROUND) 
                 end 
             end
         end
@@ -590,7 +603,7 @@ module Wads
             row_count = @current_row
             while row_count < @data_rows.size
                 if @selected_rows.include? row_count
-                    Gosu::draw_rect(@x + 20, y, @width - 3, 28, @selection_color, 19) 
+                    Gosu::draw_rect(@x + 20, y, @width - 3, 28, @selection_color, Z_ORDER_SELECTION_BACKGROUND) 
                 end 
                 y = y + 30
                 row_count = row_count + 1
@@ -746,7 +759,7 @@ module Wads
             if points.length > 1
                 points.inject(points[0]) do |last, the_next|
                     Gosu::draw_line last.x, last.y, last.color,
-                                    the_next.x, the_next.y, last.color, 2
+                                    the_next.x, the_next.y, last.color, Z_ORDER_GRAPHIC_ELEMENTS
                     the_next
                 end
             end
@@ -804,8 +817,8 @@ module Wads
         end
 
         def draw_cursor_lines(mouse_x, mouse_y)
-            Gosu::draw_line mouse_x, y_pixel_to_screen(0), @cursor_line_color, mouse_x, y_pixel_to_screen(@height), @cursor_line_color
-            Gosu::draw_line x_pixel_to_screen(0), mouse_y, @cursor_line_color, x_pixel_to_screen(@width), mouse_y, @cursor_line_color
+            Gosu::draw_line mouse_x, y_pixel_to_screen(0), @cursor_line_color, mouse_x, y_pixel_to_screen(@height), @cursor_line_color, Z_ORDER_GRAPHIC_ELEMENTS
+            Gosu::draw_line x_pixel_to_screen(0), mouse_y, @cursor_line_color, x_pixel_to_screen(@width), mouse_y, @cursor_line_color, Z_ORDER_GRAPHIC_ELEMENTS
             
             # Return the data values at this point, so the plotter can display them
             [get_x_data_val(mouse_x), get_y_data_val(mouse_y)]

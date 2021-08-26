@@ -123,6 +123,13 @@ class WadsSampleApp < Gosu::Window
 
         stats
     end
+
+    def process_lottery_data
+        puts "The lottery example has not been implemented yet"
+        puts "however the data is available in the data directory,"
+        puts "and the same pattern used in the stocks example can"
+        puts "be applied here."
+    end
 end
 
 class SampleStocksDisplay < Widget

@@ -4,6 +4,7 @@ module Wads
 
     SPACER = "  "
     VALUE_WIDTH = 10
+    NODE_UNKNOWN = "undefined"
 
     class HashOfHashes 
         attr_accessor :data

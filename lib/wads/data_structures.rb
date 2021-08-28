@@ -4,7 +4,25 @@ module Wads
 
     SPACER = "  "
     VALUE_WIDTH = 10
-    NODE_UNKNOWN = "undefined"
+
+    DEG_0 = 0
+    DEG_45 = Math::PI * 0.25
+    DEG_90 = Math::PI * 0.5
+    DEG_135 = Math::PI * 0.75
+    DEG_180 = Math::PI 
+    DEG_225 = Math::PI * 1.25
+    DEG_270 = Math::PI * 1.5
+    DEG_315 = Math::PI * 1.75
+    DEG_360 = Math::PI * 2
+
+    DEG_22_5 = Math::PI * 0.125
+    DEG_67_5 = DEG_45 + DEG_22_5
+    DEG_112_5 = DEG_90 + DEG_22_5
+    DEG_157_5 = DEG_135 + DEG_22_5
+    DEG_202_5 = DEG_180 + DEG_22_5
+    DEG_247_5 = DEG_225 + DEG_22_5
+    DEG_292_5 = DEG_270 + DEG_22_5
+    DEG_337_5 = DEG_315 + DEG_22_5
 
     class HashOfHashes 
         attr_accessor :data
@@ -225,27 +243,157 @@ module Wads
     end
 
     class Node
-        attr_accessor :x
-        attr_accessor :y
         attr_accessor :name
-        attr_accessor :type
-        attr_accessor :inputs
+        attr_accessor :value
+        attr_accessor :backlinks
         attr_accessor :outputs
         attr_accessor :visited
+        attr_accessor :tags
 
-        def initialize(name, type = NODE_UNKNOWN)
-            @name = name
-            @type = type
-            @inputs = [] 
+        def initialize(name, value = nil, tags = {})
+            @name = name 
+            @value = value
+            @backlinks = [] 
             @outputs = []
             @visited = false
+            @tags = tags
+        end 
+        
+        def add_child(name, value)
+            add_output(name, value)
         end 
 
-        #
-        # TODO Visitor pattern and solution for detecting cyclic graphs
-        #
-        # when you visit, reset all the visited flags
-        # set it to true when you visit the node
-        # first check though if visited already true, if so, you have a cycle
+        def add_output(name, value)
+            child_node = Node.new(name, value)
+            add_output_node(child_node) 
+        end
+
+        def add_output_node(child_node)
+            child_node.backlinks << self
+            @outputs << child_node
+            child_node
+        end
+
+        def add_tag(key, value)
+            @tags[key] = value 
+        end
+
+        def get_tag(key) 
+            @tags[key] 
+        end
+
+        def find_node(search_name)
+            if @name == search_name
+                return self
+            end
+            found_node_in_child = nil
+    
+            @outputs.each do |child|
+                found_node_in_child = child.find_node(search_name)
+                if found_node_in_child
+                    return found_node_in_child
+                end
+            end
+            nil
+        end
+    
+        def visit(&block)
+            node_queue = [self]
+            until node_queue.empty?
+                node = node_queue.shift
+                yield node
+                node.outputs.each do |c|
+                    node_queue << c
+                end
+            end
+        end
+
+        def to_display 
+            "#{@name}: #{value}   inputs: #{@backlinks.size}  outputs: #{@outputs.size}"
+        end 
+
+        def full_display 
+            puts to_display
+            @backlinks.each do |i|
+                puts "Input:  #{i.name}"
+            end
+            @outputs.each do |o|
+                puts "Output: #{o.name}"
+            end
+        end 
+    end
+
+    class Graph 
+        attr_accessor :node_list
+        attr_accessor :node_map
+
+        def initialize 
+            @node_list = []
+            @node_map = {}
+        end
+
+        def add_node(node) 
+            @node_list << node 
+            @node_map[node.name] = node 
+        end 
+
+        # TODO add_edge(source, target, tags)
+
+        def find_node(name) 
+            @node_map[name]
+        end 
+
+        def node_by_index(index) 
+            @node_list[index] 
+        end 
+
+        def reset_visited 
+            @node_list.each do |node|
+                node.visited = false 
+            end 
+        end
+
+        def root_nodes 
+            list = []
+            @node_list.each do |node|
+                if node.backlinks.empty? 
+                    list << node 
+                end  
+            end 
+            list 
+        end 
+
+        def is_cycle(node)
+            reset_visited
+            node.visit do |n|
+                if n.visited 
+                    return true
+                else 
+                    n.visited = true
+                end
+            end
+            false
+        end
+
+        def fan_out(node, max_depth, current_depth = 1)
+            if current_depth > max_depth 
+                return {}
+            end
+            map = {}
+            map[node.name] = node
+            node.backlinks.each do |child|
+                map_from_child = fan_out(child, max_depth, current_depth + 1)
+                map_from_child.each do |key, value|
+                    map[key] = value 
+                end
+            end 
+            node.outputs.each do |child|
+                map_from_child = fan_out(child, max_depth, current_depth + 1)
+                map_from_child.each do |key, value|
+                    map[key] = value 
+                end
+            end 
+            map
+        end
     end
 end

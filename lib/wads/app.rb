@@ -1,4 +1,5 @@
 require 'gosu'
+require 'json'
 require_relative 'data_structures'
 require_relative 'widgets'
 require_relative 'version'
@@ -9,6 +10,7 @@ class WadsSampleApp < Gosu::Window
     
     STOCKS_DATA_FILE = "./data/NASDAQ.csv"
     LOTTERY_DATA_FILE = "./data/Pick4_12_21_2020.txt"
+    STAR_WARS_DATA_FILE = "./data/starwars-episode-4-interactions.json"
 
     def initialize
         super(800, 600)
@@ -19,6 +21,7 @@ class WadsSampleApp < Gosu::Window
         @small_font = Gosu::Font.new(22)
         @banner_image = Gosu::Image.new("./media/Banner.png")
         @display_widget = nil
+        @update_count = 0
     end 
 
     def parse_opts_and_run 
@@ -36,7 +39,11 @@ class WadsSampleApp < Gosu::Window
             else 
                 stats.report(Date::DAYNAMES[1..5])
             end
-        
+
+        elsif opts[:jedi] 
+            graph = process_star_wars_data
+            @display_widget = SampleStarWarsDisplay.new(@small_font, graph)
+            show
         elsif opts[:lottery] 
             process_lottery_data
         else
@@ -51,7 +58,8 @@ class WadsSampleApp < Gosu::Window
     end
 
     def update 
-        # TODO
+        @display_widget.update(@update_count, mouse_x, mouse_y)
+        @update_count = @update_count + 1
     end 
     
     def draw
@@ -72,6 +80,10 @@ class WadsSampleApp < Gosu::Window
         if result.close_widget
             close
         end
+    end
+
+    def button_up id
+        @display_widget.button_up id, mouse_x, mouse_y
     end
 
     def process_stock_data 
@@ -129,6 +141,66 @@ class WadsSampleApp < Gosu::Window
         puts "however the data is available in the data directory,"
         puts "and the same pattern used in the stocks example can"
         puts "be applied here."
+    end
+
+    def process_star_wars_data 
+        star_wars_json = File.read(STAR_WARS_DATA_FILE)
+        data_hash = JSON.parse(star_wars_json)
+        puts data_hash
+        characters = data_hash['nodes']
+        interactions = data_hash['links']
+
+        # The interactions in the data set reference the characters by their
+        # zero based index, so we keep a reference in our graph by index.
+        # The character's value is the number of scenes in which they appear.
+        graph = Graph.new
+        characters.each do |character|
+            node_tags = {}
+            node_color_str = character['colour']
+            # This is a bit of a hack, but our background is black so black text
+            # will not show up. Change this to white
+            if node_color_str == "#000000"
+                node_color_str = "#FFFFFF"
+            end
+            # Convert hex string (ex. "#EE00AA") into int hex representation
+            # understood by Gosu color (ex. 0xFFEE00AA)
+            node_color = "0xFF#{node_color_str[1..-1]}".to_i(16)
+            node_tags['color'] = node_color
+            graph.add_node(Node.new(character['name'], character['value'], node_tags))
+        end
+        interactions.each do |interaction| 
+            character_one = graph.node_by_index(interaction['source'])
+            character_two = graph.node_by_index(interaction['target'])
+            number_of_scenes_together = interaction['value']  # TODO use this once we have edges
+            #if character_one.name == "LUKE" or character_two.name == "LUKE"
+            #    puts "Adding interaction between #{character_one.name} and #{character_two.name}"
+            #end
+            character_one.add_output_node(character_two)
+        end
+        
+        #graph.root_nodes.each do |child| 
+        #    puts "#{child.to_display}    is cycle: #{graph.is_cycle(child)}" 
+        #end
+        #puts " "
+
+        #node = graph.find_node("BIGGS")
+        #graph.reset_visited
+        #node.full_display
+        #count = 0
+        #node.visit do |n|
+        #    if n.visited 
+                # skip
+        #    else 
+        #        puts "#{count}  #{n.to_display}" 
+        #        n.visited = true
+        #        count = count + 1
+        #        if count > 1000
+        #            exit 
+        #        end
+        #    end
+        #end
+
+        graph
     end
 end
 
@@ -196,4 +268,72 @@ class SampleStocksDisplay < Widget
         end 
         WidgetResult.new(false)
     end 
+end
+
+class SampleStarWarsDisplay < Widget
+    attr_accessor :graph
+
+    def initialize(font, graph)
+        super(10, 100, COLOR_HEADER_BRIGHT_BLUE)
+        set_dimensions(780, 500)
+        set_font(font)
+        add_child(Document.new(sample_content, x + 5, y + 5, @width, @height, @font))
+        @exit_button = Button.new("Exit", 380, bottom_edge - 30, @font)
+        add_child(@exit_button)
+
+        @graph = graph
+        @data_table = SingleSelectTable.new(@x + 5, @y + 70,     # top left corner
+                                            770, 180,            # width, height
+                                            ["Character", "Number of Scenes"], # column headers
+                                            @font, COLOR_WHITE,  # font and text color
+                                            5)                   # max visible rows
+        @data_table.selected_color = COLOR_LIGHT_GRAY
+        @graph.node_list.each do |character|
+            @data_table.add_row([character.name, character.value], character.get_tag("color"))
+        end
+        add_child(@data_table)
+        @graph_display = GraphWidget.new(x + 5, y + 260, 770, 200, @font, @color, @graph) 
+    end 
+
+    def sample_content
+        <<~HEREDOC
+          This sample analysis shows the interactions between characters in the Star Wars
+          Episode 4: A New Hope. Click on a character to see more detail.
+        HEREDOC
+    end
+
+    def render 
+        @graph_display.draw 
+    end 
+
+    def button_down id, mouse_x, mouse_y
+        if id == Gosu::MsLeft
+            if @exit_button.contains_click(mouse_x, mouse_y)
+                return WidgetResult.new(true)
+            elsif @data_table.contains_click(mouse_x, mouse_y)
+                val = @data_table.set_selected_row(mouse_y, 0)
+                if val.nil?
+                    # nothing to do
+                else
+                    node = @graph.find_node(val)
+                    @graph_display.set_display(node, 2)
+                end  
+            elsif @graph_display.contains_click(mouse_x, mouse_y)
+                @graph_display.button_down id, mouse_x, mouse_y
+            end 
+        elsif id == Gosu::KbUp
+            @data_table.scroll_up
+        elsif id == Gosu::KbDown
+            @data_table.scroll_down
+        end 
+        WidgetResult.new(false)
+    end 
+
+    def button_up id, mouse_x, mouse_y
+        @graph_display.button_up id, mouse_x, mouse_y
+    end
+
+    def update update_count, mouse_x, mouse_y
+        @graph_display.update update_count, mouse_x, mouse_y
+    end
 end

@@ -25,3 +25,15 @@ cd ruby-wads
 
 This will run the sample NASDAQ stocks analysis that features the use of the 
 Stats class, and a table Gosu widget used to display the results of the analysis.
+
+You can also see the graph capabilities by running the Star Wars analysis example.
+This uses a data set that captures all character interactions within Episode 4.
+
+```
+./run-sample-app -j -g
+```
+
+## References
+
+The Star Wars data set is courtesy of:
+Gabasova, E. (2016). Star Wars social network. DOI: https://doi.org/10.5281/zenodo.1411479.

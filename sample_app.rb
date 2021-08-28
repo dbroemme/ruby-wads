@@ -10,8 +10,8 @@ class SampleAppCommand
         command ""
 
         example <<~EOS
-        Run the sample app to analyze stock market data
-          $ ./run-sample-app
+        Run the sample app to analyze stock market data in gui mode
+          $ ./run-sample-app -s -g
         EOS
 
     end
@@ -33,6 +33,12 @@ class SampleAppCommand
         long "--lottery"
         desc "Run sample analysis of lottery numbers"
     end 
+
+    flag :jedi do 
+        short "-j"
+        long "--jedi"
+        desc "Run sample analysis of interactions between Star Wars"
+    end
 
     flag :gui do 
         short "-g"

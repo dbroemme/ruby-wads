@@ -1,3 +1,5 @@
+require_relative 'data_structures'
+
 module Wads
     COLOR_PEACH = Gosu::Color.argb(0xffe6b0aa)
     COLOR_LIGHT_PURPLE = Gosu::Color.argb(0xffd7bde2)
@@ -28,8 +30,8 @@ module Wads
 
     Z_ORDER_BACKGROUND = 2
     Z_ORDER_WIDGET_BORDER = 3
-    Z_ORDER_GRAPHIC_ELEMENTS = 4
-    Z_ORDER_SELECTION_BACKGROUND = 5
+    Z_ORDER_SELECTION_BACKGROUND = 4
+    Z_ORDER_GRAPHIC_ELEMENTS = 5
     Z_ORDER_PLOT_POINTS = 6
     Z_ORDER_OVERLAY_BACKGROUND = 7
     Z_ORDER_OVERLAY_ELEMENTS = 8
@@ -94,6 +96,10 @@ module Wads
             @x + ((right_edge - @x) / 2)
         end 
 
+        def center_y
+            @y + ((bottom_edge - @y) / 2)
+        end 
+
         def draw 
             if @visible 
                 render
@@ -109,8 +115,13 @@ module Wads
             end 
         end
 
-        def draw_background 
-            Gosu::draw_rect(@x + 1, @y + 1, @width - 1, @height - 1, @background_color, Z_ORDER_BACKGROUND) 
+        def draw_background(z_order = Z_ORDER_BACKGROUND)
+            Gosu::draw_rect(@x + 1, @y + 1, @width - 3, @height - 3, @background_color, z_order) 
+        end
+
+        def draw_shadow(color, z_order = Z_ORDER_WIDGET_BORDER)
+            Gosu::draw_line @x - 1, @y - 1, color, right_edge - 1, @y - 1, color, z_order
+            Gosu::draw_line @x - 1, @y - 1, color, @x - 1, bottom_edge - 1, color, z_order
         end
 
         def render 
@@ -119,18 +130,34 @@ module Wads
             # render is for specific drawing done by the widget
         end 
 
-        def draw_border(color = nil)
+        def draw_border(color = nil, zorder = Z_ORDER_WIDGET_BORDER)
             if color.nil? 
-                color = @color 
+                if @border_color
+                    color = @border_color 
+                else
+                    color = @color 
+                end
             end
-            Gosu::draw_line @x, @y, color, right_edge, @y, color, Z_ORDER_WIDGET_BORDER
-            Gosu::draw_line @x, @y, color, @x, bottom_edge, color, Z_ORDER_WIDGET_BORDER
-            Gosu::draw_line @x,bottom_edge, color, right_edge, bottom_edge, color, Z_ORDER_WIDGET_BORDER
-            Gosu::draw_line right_edge, @y, color, right_edge, bottom_edge, color, Z_ORDER_WIDGET_BORDER
+            Gosu::draw_line @x, @y, color, right_edge, @y, color, zorder
+            Gosu::draw_line @x, @y, color, @x, bottom_edge, color, zorder
+            Gosu::draw_line @x,bottom_edge, color, right_edge, bottom_edge, color, zorder
+            Gosu::draw_line right_edge, @y, color, right_edge, bottom_edge, color, zorder
         end
 
         def contains_click(mouse_x, mouse_y)
             mouse_x >= @x and mouse_x <= right_edge and mouse_y >= @y and mouse_y <= bottom_edge
+        end
+
+        def update update_count, mouse_x, mouse_y
+            # empty base implementation
+        end
+
+        def button_down id, mouse_x, mouse_y
+            # empty base implementation
+        end
+
+        def button_up id, mouse_x, mouse_y
+            # empty base implementation
         end
     end 
 
@@ -204,7 +231,7 @@ module Wads
         end
 
         def render 
-            draw_border(COLOR_WHITE)
+            draw_border(@color)
             text_x = center_x - (@text_pixel_width / 2)
             @font.draw_text(@label, text_x, @y, Z_ORDER_TEXT, 1, 1, @text_color)
         end 
@@ -456,7 +483,8 @@ module Wads
         end 
 
         def scroll_down
-            if @current_row < @data_rows.size - 1
+            puts "Scroll down: curr row: #{@current_row}   size #{@data_rows.size}"
+            if @current_row + @max_visible_rows < @data_rows.size
                 @current_row = @current_row + @max_visible_rows 
             end 
         end 
@@ -546,7 +574,13 @@ module Wads
         def set_selected_row(mouse_y, column_number)
             row_number = determine_row_number(mouse_y)
             if not row_number.nil?
-                @selected_row = @current_row + row_number
+                new_selected_row = @current_row + row_number
+                if @selected_row 
+                    if @selected_row == new_selected_row
+                        return nil  # You can't select the same row already selected
+                    end 
+                end
+                @selected_row = new_selected_row
                 @data_rows[@selected_row][column_number]
             end
         end
@@ -702,8 +736,6 @@ module Wads
                 data_set.derive_values(@visible_range, @data_set_hash)
                 data_set.data_points.each do |point|
                     if is_on_screen(point) 
-                        #puts "Adding render point at x #{point.x}, #{Time.at(point.x)}"
-                        #puts "Visible range: #{Time.at(@visible_range.left_x)}  #{Time.at(@visible_range.right_x)}"
                         data_set.add_rendered_point PlotPoint.new(draw_x(point.x), draw_y(point.y), data_set.color, data_set.data_point_size)
                     end
                 end
@@ -824,4 +856,140 @@ module Wads
             [get_x_data_val(mouse_x), get_y_data_val(mouse_y)]
         end 
     end 
+
+    class NodeWidget < Button
+        attr_accessor :data_node
+
+        def initialize(node, x, y, font, border_color = COLOR_DARK_GRAY, text_color = COLOR_HEADER_BRIGHT_BLUE) 
+            super(node.name, x, y, font, nil, border_color, text_color) 
+            set_background(COLOR_BLACK)
+            @data_node = node
+        end
+
+        def render 
+            super 
+            draw_background(Z_ORDER_OVERLAY_BACKGROUND)
+            draw_shadow(COLOR_GRAY)
+        end
+    end 
+
+    class GraphWidget < Widget
+        attr_accessor :graph
+        attr_accessor :center_node 
+        attr_accessor :depth 
+        attr_accessor :selected_node
+        attr_accessor :selected_node_x_offset
+        attr_accessor :selected_node_y_offset
+
+        def initialize(x, y, width, height, font, color, graph) 
+            super x, y, color 
+            set_font(font)
+            set_dimensions(width, height)
+            set_border(color)
+            @graph = graph 
+        end 
+
+        def update update_count, mouse_x, mouse_y
+            if contains_click(mouse_x, mouse_y) and @selected_node 
+                @selected_node.x = mouse_x - @selected_node_x_offset
+                @selected_node.y = mouse_y - @selected_node_y_offset
+            end
+        end
+
+        def button_down id, mouse_x, mouse_y
+            if id == Gosu::MsLeft
+                # check to see if any node was selected
+                if @rendered_nodes
+                    @rendered_nodes.values.each do |rn|
+                        if rn.contains_click(mouse_x, mouse_y)
+                            @selected_node = rn 
+                            @selected_node_x_offset = mouse_x - rn.x 
+                            @selected_node_y_offset = mouse_y - rn.y
+                        end
+                    end
+                end
+            end
+            WidgetResult.new(false)
+        end
+
+        def button_up id, mouse_x, mouse_y
+            if id == Gosu::MsLeft
+                if @selected_node 
+                    @selected_node = nil 
+                end 
+            end
+        end
+
+        def set_display(center_node, max_depth)
+            # Determine the list of nodes to draw
+            @depth = depth 
+            @visible_data_nodes = @graph.fan_out(center_node, max_depth)
+
+            # Convert the data nodes to rendered nodes
+            # Start by putting the center node in the center, then draw others around it
+            @rendered_nodes = {}
+            @rendered_nodes[center_node.name] = NodeWidget.new(center_node, center_x, center_y, @font,
+                    center_node.get_tag("color"), center_node.get_tag("color"))
+            # TODO randomly decide where they go, except for the center node goes in the center
+            # is that always the first of the values? Not sure, probably can't depend on that
+
+            number_of_visible_nodes = @visible_data_nodes.size 
+            radians_between_nodes = DEG_360 / number_of_visible_nodes.to_f
+            current_radians = 0.05
+
+            @visible_data_nodes.each do |node_name, data_node|
+                if node_name == center_node.name 
+                    # skip, we already got this one
+                else 
+                    # TODO use radians to spread the other nodes around the center node
+                    # For now, we will randomly place them
+                    node_x = center_x + ((80 + rand(200)) * Math.cos(current_radians))
+                    node_y = center_y - ((40 + rand(100)) * Math.sin(current_radians))
+                    if node_x < @x 
+                        node_x = @x + 1
+                    elsif node_x > right_edge - 20
+                        node_x = right_edge - 20
+                    end 
+                    if node_y < @y 
+                        node_y = @y + 1
+                    elsif node_y > bottom_edge - 26 
+                        node_y = bottom_edge - 26
+                    end
+                    current_radians = current_radians + radians_between_nodes
+
+                    # Note we can link between data nodes and rendered nodes using the node name
+                    # We have a map of each
+                    @rendered_nodes[data_node.name] = NodeWidget.new(
+                                                        data_node,
+                                                        node_x,
+                                                        node_y,
+                                                        @font,
+                                                        data_node.get_tag("color"),
+                                                        data_node.get_tag("color"))
+                end
+            end
+        end
+
+        def render 
+            if @rendered_nodes
+                @rendered_nodes.values.each do |vn|
+                    vn.draw 
+                end 
+                # Draw the connections between nodes 
+                @visible_data_nodes.values.each do |data_node|
+                    data_node.outputs.each do |connected_data_node|
+                        rendered_node = @rendered_nodes[data_node.name]
+                        connected_rendered_node = @rendered_nodes[connected_data_node.name]
+                        if connected_rendered_node.nil?
+                            # Don't draw if it is not currently visible
+                        else
+                            Gosu::draw_line rendered_node.center_x, rendered_node.center_y, rendered_node.color,
+                                        connected_rendered_node.center_x, connected_rendered_node.center_y, connected_rendered_node.color,
+                                        Z_ORDER_GRAPHIC_ELEMENTS
+                        end
+                    end
+                end 
+            end
+        end 
+    end
 end

@@ -2,6 +2,7 @@
 
 A number of Ruby Gosu-based (W)idgets (a)nd (D)ata (S)tructures for your applications.
 
+![alt Screenshot](https://github.com/dbroemme/ruby-wads/blob/main/media/WadsScreenshot.png?raw=true)
 ## Installation
 
 Add this line to your application’s Gemfile:

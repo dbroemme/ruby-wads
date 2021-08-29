@@ -274,6 +274,13 @@ module Wads
             child_node
         end
 
+        def add_output_edge(destination, tags = {})
+            edge = Edge.new(destination, tags)
+            destination.backlinks << self
+            @outputs << edge
+            edge
+        end
+
         def add_tag(key, value)
             @tags[key] = value 
         end
@@ -289,10 +296,13 @@ module Wads
             found_node_in_child = nil
     
             @outputs.each do |child|
+                if child.is_a? Edge 
+                    child = child.destination 
+                end
                 found_node_in_child = child.find_node(search_name)
                 if found_node_in_child
                     return found_node_in_child
-                end
+                end 
             end
             nil
         end
@@ -303,6 +313,9 @@ module Wads
                 node = node_queue.shift
                 yield node
                 node.outputs.each do |c|
+                    if child.is_a? Edge 
+                        child = child.destination 
+                    end 
                     node_queue << c
                 end
             end
@@ -317,11 +330,29 @@ module Wads
             @backlinks.each do |i|
                 puts "Input:  #{i.name}"
             end
-            @outputs.each do |o|
-                puts "Output: #{o.name}"
-            end
+            #@outputs.each do |o|
+            #    puts "Output: #{o.name}"
+            #end
         end 
     end
+
+    class Edge
+        attr_accessor :destination
+        attr_accessor :tags
+
+        def initialize(destination, tags = {})
+            @destination = destination
+            @tags = tags
+        end 
+
+        def add_tag(key, value)
+            @tags[key] = value 
+        end
+
+        def get_tag(key) 
+            @tags[key] 
+        end
+    end 
 
     class Graph 
         attr_accessor :node_list
@@ -337,7 +368,14 @@ module Wads
             @node_map[node.name] = node 
         end 
 
-        # TODO add_edge(source, target, tags)
+        def add_edge(source, target, tags)
+            if source.is_a? String 
+                source = find_node(source)
+            end 
+            if target.is_a? String 
+                target = find_node(target)
+            end 
+        end
 
         def find_node(name) 
             @node_map[name]
@@ -388,6 +426,9 @@ module Wads
                 end
             end 
             node.outputs.each do |child|
+                if child.is_a? Edge 
+                    child = child.destination 
+                end
                 map_from_child = fan_out(child, max_depth, current_depth + 1)
                 map_from_child.each do |key, value|
                     map[key] = value 

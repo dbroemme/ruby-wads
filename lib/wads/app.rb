@@ -50,6 +50,7 @@ class WadsSampleApp < Gosu::Window
             puts " "
             puts "Select one of the following sample analysis options"
             puts "-s   Run sample stocks analysis"
+            puts "-j   Run sample Star Wars character analysis"
             puts "-l   Run sample analysis of lottery numbers"
             puts " "
             exit
@@ -146,7 +147,6 @@ class WadsSampleApp < Gosu::Window
     def process_star_wars_data 
         star_wars_json = File.read(STAR_WARS_DATA_FILE)
         data_hash = JSON.parse(star_wars_json)
-        puts data_hash
         characters = data_hash['nodes']
         interactions = data_hash['links']
 
@@ -171,35 +171,11 @@ class WadsSampleApp < Gosu::Window
         interactions.each do |interaction| 
             character_one = graph.node_by_index(interaction['source'])
             character_two = graph.node_by_index(interaction['target'])
-            number_of_scenes_together = interaction['value']  # TODO use this once we have edges
-            #if character_one.name == "LUKE" or character_two.name == "LUKE"
-            #    puts "Adding interaction between #{character_one.name} and #{character_two.name}"
-            #end
-            character_one.add_output_node(character_two)
+            number_of_scenes_together = interaction['value']
+            edge_tags = {}
+            edge_tags["scenes"] = number_of_scenes_together
+            character_one.add_output_edge(character_two, edge_tags)
         end
-        
-        #graph.root_nodes.each do |child| 
-        #    puts "#{child.to_display}    is cycle: #{graph.is_cycle(child)}" 
-        #end
-        #puts " "
-
-        #node = graph.find_node("BIGGS")
-        #graph.reset_visited
-        #node.full_display
-        #count = 0
-        #node.visit do |n|
-        #    if n.visited 
-                # skip
-        #    else 
-        #        puts "#{count}  #{n.to_display}" 
-        #        n.visited = true
-        #        count = count + 1
-        #        if count > 1000
-        #            exit 
-        #        end
-        #    end
-        #end
-
         graph
     end
 end

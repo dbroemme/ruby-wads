@@ -483,7 +483,6 @@ module Wads
         end 
 
         def scroll_down
-            puts "Scroll down: curr row: #{@current_row}   size #{@data_rows.size}"
             if @current_row + @max_visible_rows < @data_rows.size
                 @current_row = @current_row + @max_visible_rows 
             end 
@@ -930,9 +929,9 @@ module Wads
             @rendered_nodes = {}
             @rendered_nodes[center_node.name] = NodeWidget.new(center_node, center_x, center_y, @font,
                     center_node.get_tag("color"), center_node.get_tag("color"))
-            # TODO randomly decide where they go, except for the center node goes in the center
-            # is that always the first of the values? Not sure, probably can't depend on that
 
+            # Spread out the other nodes around the center node
+            # going in a circle
             number_of_visible_nodes = @visible_data_nodes.size 
             radians_between_nodes = DEG_360 / number_of_visible_nodes.to_f
             current_radians = 0.05
@@ -941,7 +940,7 @@ module Wads
                 if node_name == center_node.name 
                     # skip, we already got this one
                 else 
-                    # TODO use radians to spread the other nodes around the center node
+                    # Use radians to spread the other nodes around the center node
                     # For now, we will randomly place them
                     node_x = center_x + ((80 + rand(200)) * Math.cos(current_radians))
                     node_y = center_y - ((40 + rand(100)) * Math.sin(current_radians))
@@ -978,14 +977,17 @@ module Wads
                 # Draw the connections between nodes 
                 @visible_data_nodes.values.each do |data_node|
                     data_node.outputs.each do |connected_data_node|
+                        if connected_data_node.is_a? Edge 
+                            connected_data_node = connected_data_node.destination 
+                        end
                         rendered_node = @rendered_nodes[data_node.name]
                         connected_rendered_node = @rendered_nodes[connected_data_node.name]
                         if connected_rendered_node.nil?
                             # Don't draw if it is not currently visible
                         else
                             Gosu::draw_line rendered_node.center_x, rendered_node.center_y, rendered_node.color,
-                                        connected_rendered_node.center_x, connected_rendered_node.center_y, connected_rendered_node.color,
-                                        Z_ORDER_GRAPHIC_ELEMENTS
+                                    connected_rendered_node.center_x, connected_rendered_node.center_y, connected_rendered_node.color,
+                                    Z_ORDER_GRAPHIC_ELEMENTS
                         end
                     end
                 end 

@@ -41,12 +41,12 @@ module Wads
         attr_accessor :x
         attr_accessor :y 
         attr_accessor :color 
+        attr_accessor :background_color
+        attr_accessor :border_color
         attr_accessor :width
         attr_accessor :height 
         attr_accessor :visible 
         attr_accessor :children
-        attr_accessor :background_color
-        attr_accessor :border_color
         attr_accessor :font
 
         def initialize(x, y, color = COLOR_CYAN) 
@@ -77,6 +77,10 @@ module Wads
 
         def set_font(font)
             @font = font 
+        end
+
+        def set_color(color)
+            @color = color 
         end
 
         def set_dimensions(width, height)
@@ -124,12 +128,6 @@ module Wads
             Gosu::draw_line @x - 1, @y - 1, color, @x - 1, bottom_edge - 1, color, z_order
         end
 
-        def render 
-            # Base implementation is empty
-            # Note that the draw method invoked by clients stills renders any added children
-            # render is for specific drawing done by the widget
-        end 
-
         def draw_border(color = nil, zorder = Z_ORDER_WIDGET_BORDER)
             if color.nil? 
                 if @border_color
@@ -148,17 +146,112 @@ module Wads
             mouse_x >= @x and mouse_x <= right_edge and mouse_y >= @y and mouse_y <= bottom_edge
         end
 
-        def update update_count, mouse_x, mouse_y
+        def update(update_count, mouse_x, mouse_y)
+            handle_update(update_count, mouse_x, mouse_y) 
+            @children.each do |child| 
+                child.handle_update(update_count, mouse_x, mouse_y) 
+            end 
+        end
+
+        def button_down(id, mouse_x, mouse_y)
+            #puts "Base widget #{self.class.name} button down #{id}."
+            if id == Gosu::MsLeft
+                result = handle_mouse_down mouse_x, mouse_y
+                return result unless result.nil?
+            else 
+                result = handle_key_press id, mouse_x, mouse_y
+                return result unless result.nil?
+            end
+            @children.each do |child| 
+                if id == Gosu::MsLeft
+                    if child.contains_click(mouse_x, mouse_y) 
+                        result = child.handle_mouse_down mouse_x, mouse_y
+                        return result unless result.nil?
+                    end 
+                else 
+                    result = child.handle_key_press id, mouse_x, mouse_y
+                    return result unless result.nil?
+                end
+            end 
+            WidgetResult.new(false)
+        end
+
+        def button_up(id, mouse_x, mouse_y)
+            #puts "Base widget #{self.class.name} button up #{id}."
+            if id == Gosu::MsLeft
+                result = handle_mouse_up mouse_x, mouse_y
+                return result unless result.nil?
+            end
+
+            @children.each do |child| 
+                if id == Gosu::MsLeft
+                    if child.contains_click(mouse_x, mouse_y) 
+                        result = child.handle_mouse_up mouse_x, mouse_y
+                        return result unless result.nil?
+                    end 
+                end
+            end
+            WidgetResult.new(false)
+        end
+
+        def pixel_x(rel_x) 
+            @x + rel_x 
+        end 
+
+        def pixel_y(rel_y) 
+            @y + rel_y
+        end 
+
+        def add_document(content, rel_x, rel_y, width, height)
+            new_doc = Document.new(content, pixel_x(rel_x), pixel_y(rel_y), width, height, @font)
+            add_child(new_doc)
+            new_doc
+        end
+
+        def add_button(label, rel_x, rel_y, &block)
+            new_button = Button.new(label, pixel_x(rel_x), pixel_y(rel_y), @font)
+            new_button.set_action(&block)
+            add_child(new_button)
+            new_button
+        end
+
+        def add_single_select_table(rel_x, rel_y, width, height, column_headers, color = COLOR_WHITE, max_visible_rows = 10)
+            new_table = SingleSelectTable.new(pixel_x(rel_x), pixel_y(rel_y),
+                              width, height, column_headers, @font, COLOR_WHITE, max_visible_rows)
+            add_child(new_table)
+            new_table
+        end 
+
+        def add_graph_display(rel_x, rel_y, width, height, graph)
+            new_graph = GraphWidget.new(pixel_x(rel_x), pixel_y(rel_y), width, height, @font, @color, graph) 
+            add_child(new_graph)
+            new_graph
+        end
+
+        #
+        # Callbacks for subclasses to override
+        #
+        def handle_mouse_down mouse_x, mouse_y
             # empty base implementation
         end
 
-        def button_down id, mouse_x, mouse_y
+        def handle_mouse_up mouse_x, mouse_y
             # empty base implementation
         end
 
-        def button_up id, mouse_x, mouse_y
+        def handle_key_press id, mouse_x, mouse_y
             # empty base implementation
         end
+
+        def handle_update update_count, mouse_x, mouse_y
+            # empty base implementation
+        end
+
+        def render 
+            # Base implementation is empty
+            # Note that the draw method invoked by clients stills renders any added children
+            # render is for specific drawing done by the widget
+        end 
     end 
 
     class Text < Widget
@@ -214,6 +307,7 @@ module Wads
     class Button < Widget
         attr_accessor :label
         attr_accessor :is_pressed
+        attr_accessor :action_code
 
         def initialize(label, x, y, font, width = nil, color = COLOR_DARK_GRAY, text_color = COLOR_HEADER_BRIGHT_BLUE) 
             super(x, y, color) 
@@ -235,6 +329,16 @@ module Wads
             text_x = center_x - (@text_pixel_width / 2)
             @font.draw_text(@label, text_x, @y, Z_ORDER_TEXT, 1, 1, @text_color)
         end 
+
+        def set_action(&block) 
+            @action_code = block
+        end
+
+        def handle_mouse_down mouse_x, mouse_y
+            if @action_code
+                @action_code.call
+            end
+        end
     end 
 
     class Document < Widget
@@ -264,7 +368,7 @@ module Wads
             set_border(COLOR_WHITE)
             @title = title
             add_child(Text.new(title, x + 5, y + 5, Gosu::Font.new(32)))
-            add_child(Document.new(content, x + 5, y + 52, width, height, font))
+            add_child(Document.new(content, x + 5, y + 52, width, height - 52, font))
             @ok_button = Button.new("OK", center_x - 50, bottom_edge - 26, @font, 100, COLOR_FORM_BUTTON)
             add_child(@ok_button) 
             set_background(COLOR_GRAY)
@@ -636,7 +740,7 @@ module Wads
             row_count = @current_row
             while row_count < @data_rows.size
                 if @selected_rows.include? row_count
-                    Gosu::draw_rect(@x + 20, y, @width - 3, 28, @selection_color, Z_ORDER_SELECTION_BACKGROUND) 
+                    Gosu::draw_rect(@x + 20, y, @width - 30, 28, @selection_color, Z_ORDER_SELECTION_BACKGROUND) 
                 end 
                 y = y + 30
                 row_count = row_count + 1
@@ -875,7 +979,6 @@ module Wads
     class GraphWidget < Widget
         attr_accessor :graph
         attr_accessor :center_node 
-        attr_accessor :depth 
         attr_accessor :selected_node
         attr_accessor :selected_node_x_offset
         attr_accessor :selected_node_y_offset
@@ -886,50 +989,64 @@ module Wads
             set_dimensions(width, height)
             set_border(color)
             @graph = graph 
+            set_all_nodes_for_display
         end 
 
-        def update update_count, mouse_x, mouse_y
+        def handle_update update_count, mouse_x, mouse_y
             if contains_click(mouse_x, mouse_y) and @selected_node 
                 @selected_node.x = mouse_x - @selected_node_x_offset
                 @selected_node.y = mouse_y - @selected_node_y_offset
             end
         end
 
-        def button_down id, mouse_x, mouse_y
-            if id == Gosu::MsLeft
-                # check to see if any node was selected
-                if @rendered_nodes
-                    @rendered_nodes.values.each do |rn|
-                        if rn.contains_click(mouse_x, mouse_y)
-                            @selected_node = rn 
-                            @selected_node_x_offset = mouse_x - rn.x 
-                            @selected_node_y_offset = mouse_y - rn.y
-                        end
+        def handle_mouse_down mouse_x, mouse_y
+            # check to see if any node was selected
+            if @rendered_nodes
+                @rendered_nodes.values.each do |rn|
+                    if rn.contains_click(mouse_x, mouse_y)
+                        @selected_node = rn 
+                        @selected_node_x_offset = mouse_x - rn.x 
+                        @selected_node_y_offset = mouse_y - rn.y
                     end
                 end
             end
             WidgetResult.new(false)
         end
 
-        def button_up id, mouse_x, mouse_y
-            if id == Gosu::MsLeft
-                if @selected_node 
-                    @selected_node = nil 
-                end 
-            end
+        def handle_mouse_up mouse_x, mouse_y
+            if @selected_node 
+                @selected_node = nil 
+            end 
         end
 
-        def set_display(center_node, max_depth)
+        def set_all_nodes_for_display 
+            @visible_data_nodes = @graph.node_map
+            @rendered_nodes = {}
+            populate_rendered_nodes
+        end 
+
+        def get_node_color(node)
+            color_tag = node.get_tag("color")
+            if color_tag.nil? 
+                return @color 
+            end 
+            color_tag
+        end 
+
+        def set_center_node(center_node, max_depth = -1)
             # Determine the list of nodes to draw
-            @depth = depth 
-            @visible_data_nodes = @graph.fan_out(center_node, max_depth)
+            @visible_data_nodes = @graph.traverse_and_collect_nodes(center_node, max_depth)
 
             # Convert the data nodes to rendered nodes
             # Start by putting the center node in the center, then draw others around it
             @rendered_nodes = {}
             @rendered_nodes[center_node.name] = NodeWidget.new(center_node, center_x, center_y, @font,
-                    center_node.get_tag("color"), center_node.get_tag("color"))
+                get_node_color(center_node), get_node_color(center_node))
 
+            populate_rendered_nodes(center_node)
+        end 
+
+        def populate_rendered_nodes(center_node = nil)
             # Spread out the other nodes around the center node
             # going in a circle
             number_of_visible_nodes = @visible_data_nodes.size 
@@ -937,9 +1054,13 @@ module Wads
             current_radians = 0.05
 
             @visible_data_nodes.each do |node_name, data_node|
-                if node_name == center_node.name 
-                    # skip, we already got this one
-                else 
+                process_this_node = true
+                if center_node 
+                    if node_name == center_node.name 
+                        process_this_node = false 
+                    end 
+                end
+                if process_this_node 
                     # Use radians to spread the other nodes around the center node
                     # For now, we will randomly place them
                     node_x = center_x + ((80 + rand(200)) * Math.cos(current_radians))
@@ -963,8 +1084,8 @@ module Wads
                                                         node_x,
                                                         node_y,
                                                         @font,
-                                                        data_node.get_tag("color"),
-                                                        data_node.get_tag("color"))
+                                                        get_node_color(data_node),
+                                                        get_node_color(data_node))
                 end
             end
         end

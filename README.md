@@ -10,7 +10,7 @@ Add this line to your application’s Gemfile:
 ```
 gem 'wads'
 ```
-And the run bundle install.
+And then run bundle install.
 
 ## Sample Application
 

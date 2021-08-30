@@ -368,13 +368,14 @@ module Wads
             @node_map[node.name] = node 
         end 
 
-        def add_edge(source, target, tags)
+        def add_edge(source, target, tags = {})
             if source.is_a? String 
                 source = find_node(source)
             end 
             if target.is_a? String 
                 target = find_node(target)
             end 
+            source.add_output_edge(target, tags)
         end
 
         def find_node(name) 
@@ -413,14 +414,16 @@ module Wads
             false
         end
 
-        def fan_out(node, max_depth, current_depth = 1)
-            if current_depth > max_depth 
-                return {}
+        def traverse_and_collect_nodes(node, max_depth, current_depth = 1)
+            if max_depth > 0
+                if current_depth > max_depth 
+                    return {}
+                end
             end
             map = {}
             map[node.name] = node
             node.backlinks.each do |child|
-                map_from_child = fan_out(child, max_depth, current_depth + 1)
+                map_from_child = traverse_and_collect_nodes(child, max_depth, current_depth + 1)
                 map_from_child.each do |key, value|
                     map[key] = value 
                 end
@@ -429,7 +432,7 @@ module Wads
                 if child.is_a? Edge 
                     child = child.destination 
                 end
-                map_from_child = fan_out(child, max_depth, current_depth + 1)
+                map_from_child = traverse_and_collect_nodes(child, max_depth, current_depth + 1)
                 map_from_child.each do |key, value|
                     map[key] = value 
                 end

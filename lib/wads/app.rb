@@ -174,7 +174,7 @@ class WadsSampleApp < Gosu::Window
             number_of_scenes_together = interaction['value']
             edge_tags = {}
             edge_tags["scenes"] = number_of_scenes_together
-            character_one.add_output_edge(character_two, edge_tags)
+            graph.add_edge(character_one, character_two, edge_tags)
         end
         graph
     end
@@ -187,15 +187,17 @@ class SampleStocksDisplay < Widget
         super(10, 100, COLOR_HEADER_BRIGHT_BLUE)
         set_dimensions(780, 500)
         set_font(font)
-        add_child(Document.new(sample_content, x + 5, y + 5, @width, @height, @font))
-        @exit_button = Button.new("Exit", 380, bottom_edge - 30, @font)
-        add_child(@exit_button)
+        add_document(sample_content, 5, 5, @width, @height)
+        add_button("Exit", 380, @height - 30) do
+            WidgetResult.new(true)
+        end
+
 
         @stats = stats
-        @data_table = SingleSelectTable.new(@x + 5, @y + 100,    # top left corner
-                                            770, 200,            # width, height
+        @data_table = add_single_select_table(5, 100,             # top left corner
+                                              770, 200,           # width, height
             ["Day", "Min", "Avg", "StdDev", "Max", "p10", "p90"], # column headers
-                                            @font, COLOR_WHITE)   # font and text color
+                                              COLOR_WHITE)        # font and text color
         @data_table.selected_color = COLOR_LIGHT_GRAY
         Date::DAYNAMES[1..5].each do |day|
             min = format_percent(@stats.min(day))
@@ -206,7 +208,7 @@ class SampleStocksDisplay < Widget
             p90 = format_percent(@stats.percentile(day, 0.90))
             @data_table.add_row([day, min, avg, std, max, p10, p90], COLOR_HEADER_BRIGHT_BLUE)
         end
-        add_child(@data_table)
+
         @selection_text = nil
     end 
 
@@ -228,21 +230,15 @@ class SampleStocksDisplay < Widget
         end
     end 
 
-    def button_down id, mouse_x, mouse_y
-        if id == Gosu::MsLeft
-            if @exit_button.contains_click(mouse_x, mouse_y)
-                return WidgetResult.new(true)
-            elsif @data_table.contains_click(mouse_x, mouse_y)
-                val = @data_table.set_selected_row(mouse_y, 0)
-                if val.nil?
-                    # nothing to do
-                else
-                    @selection_text = Text.new("You selected #{val}, a great day!",
-                                               x + 5, y + 400, @font)
-                end    
-            end 
-        end 
-        WidgetResult.new(false)
+    def handle_mouse_down mouse_x, mouse_y
+        if @data_table.contains_click(mouse_x, mouse_y)
+            val = @data_table.set_selected_row(mouse_y, 0)
+            if not val.nil?
+                @selection_text = Text.new("You selected #{val}, a great day!",
+                                           x + 5, y + 400, @font)
+            end    
+        end
+        nil
     end 
 end
 
@@ -253,22 +249,24 @@ class SampleStarWarsDisplay < Widget
         super(10, 100, COLOR_HEADER_BRIGHT_BLUE)
         set_dimensions(780, 500)
         set_font(font)
-        add_child(Document.new(sample_content, x + 5, y + 5, @width, @height, @font))
-        @exit_button = Button.new("Exit", 380, bottom_edge - 30, @font)
-        add_child(@exit_button)
-
         @graph = graph
-        @data_table = SingleSelectTable.new(@x + 5, @y + 70,     # top left corner
-                                            770, 180,            # width, height
-                                            ["Character", "Number of Scenes"], # column headers
-                                            @font, COLOR_WHITE,  # font and text color
-                                            5)                   # max visible rows
+
+        add_document(sample_content, 5, 5, @width, @height)
+        add_button("Exit", 370, @height - 30) do
+            WidgetResult.new(true)
+        end
+
+        @data_table = add_single_select_table(5, 70,                             # top left corner
+                                              770, 180,                          # width, height
+                                              ["Character", "Number of Scenes"], # column headers
+                                              COLOR_WHITE,                       # font and text color
+                                              5)                                 # max visible rows
         @data_table.selected_color = COLOR_LIGHT_GRAY
+
         @graph.node_list.each do |character|
             @data_table.add_row([character.name, character.value], character.get_tag("color"))
         end
-        add_child(@data_table)
-        @graph_display = GraphWidget.new(x + 5, y + 260, 770, 200, @font, @color, @graph) 
+        @graph_display = add_graph_display(5, 260, 770, 200, @graph)
     end 
 
     def sample_content
@@ -278,38 +276,23 @@ class SampleStarWarsDisplay < Widget
         HEREDOC
     end
 
-    def render 
-        @graph_display.draw 
-    end 
-
-    def button_down id, mouse_x, mouse_y
-        if id == Gosu::MsLeft
-            if @exit_button.contains_click(mouse_x, mouse_y)
-                return WidgetResult.new(true)
-            elsif @data_table.contains_click(mouse_x, mouse_y)
-                val = @data_table.set_selected_row(mouse_y, 0)
-                if val.nil?
-                    # nothing to do
-                else
-                    node = @graph.find_node(val)
-                    @graph_display.set_display(node, 2)
-                end  
-            elsif @graph_display.contains_click(mouse_x, mouse_y)
-                @graph_display.button_down id, mouse_x, mouse_y
-            end 
-        elsif id == Gosu::KbUp
+    def handle_key_press id, mouse_x, mouse_y
+        if id == Gosu::KbUp
             @data_table.scroll_up
         elsif id == Gosu::KbDown
             @data_table.scroll_down
         end 
         WidgetResult.new(false)
-    end 
-
-    def button_up id, mouse_x, mouse_y
-        @graph_display.button_up id, mouse_x, mouse_y
     end
 
-    def update update_count, mouse_x, mouse_y
-        @graph_display.update update_count, mouse_x, mouse_y
+    def handle_mouse_down mouse_x, mouse_y
+        if @data_table.contains_click(mouse_x, mouse_y)
+            val = @data_table.set_selected_row(mouse_y, 0)
+            if not val.nil?
+                node = @graph.find_node(val)
+                @graph_display.set_center_node(node, 2)
+            end  
+        end
+        nil
     end
 end

@@ -192,7 +192,6 @@ class SampleStocksDisplay < Widget
             WidgetResult.new(true)
         end
 
-
         @stats = stats
         @data_table = add_single_select_table(5, 100,             # top left corner
                                               770, 200,           # width, height

@@ -29,17 +29,17 @@ module Wads
     COLOR_ERROR_CODE_RED = Gosu::Color.argb(0xffe6b0aa)
 
     Z_ORDER_BACKGROUND = 2
-    Z_ORDER_WIDGET_BORDER = 3
+    Z_ORDER_BORDER = 3
     Z_ORDER_SELECTION_BACKGROUND = 4
     Z_ORDER_GRAPHIC_ELEMENTS = 5
     Z_ORDER_PLOT_POINTS = 6
-    Z_ORDER_OVERLAY_BACKGROUND = 7
-    Z_ORDER_OVERLAY_ELEMENTS = 8
-    Z_ORDER_TEXT = 10
+    Z_ORDER_FOCAL_ELEMENTS = 8
+    Z_ORDER_TEXT = 9
 
     class Widget 
         attr_accessor :x
         attr_accessor :y 
+        attr_accessor :base_z 
         attr_accessor :color 
         attr_accessor :background_color
         attr_accessor :border_color
@@ -57,6 +57,16 @@ module Wads
             @height = 1
             @visible = true 
             @children = []
+            @base_z = 0
+            @widget_z
+        end
+
+        def z_order 
+            @base_z + widget_z
+        end
+
+        def relative_z_order(relative_order)
+            @base_z + relative_order 
         end
 
         def add_child(child) 
@@ -119,16 +129,21 @@ module Wads
             end 
         end
 
-        def draw_background(z_order = Z_ORDER_BACKGROUND)
-            Gosu::draw_rect(@x + 1, @y + 1, @width - 3, @height - 3, @background_color, z_order) 
+        def draw_background(z_override = nil)
+            if z_override 
+                z = relative_z_order(z_override)
+            else 
+                z = relative_z_order(Z_ORDER_BACKGROUND) 
+            end
+            Gosu::draw_rect(@x + 1, @y + 1, @width - 3, @height - 3, @background_color, z) 
         end
 
-        def draw_shadow(color, z_order = Z_ORDER_WIDGET_BORDER)
-            Gosu::draw_line @x - 1, @y - 1, color, right_edge - 1, @y - 1, color, z_order
-            Gosu::draw_line @x - 1, @y - 1, color, @x - 1, bottom_edge - 1, color, z_order
+        def draw_shadow(color)
+            Gosu::draw_line @x - 1, @y - 1, color, right_edge - 1, @y - 1, color, relative_z_order(Z_ORDER_BORDER)
+            Gosu::draw_line @x - 1, @y - 1, color, @x - 1, bottom_edge - 1, color, relative_z_order(Z_ORDER_BORDER)
         end
 
-        def draw_border(color = nil, zorder = Z_ORDER_WIDGET_BORDER)
+        def draw_border(color = nil)
             if color.nil? 
                 if @border_color
                     color = @border_color 
@@ -136,10 +151,10 @@ module Wads
                     color = @color 
                 end
             end
-            Gosu::draw_line @x, @y, color, right_edge, @y, color, zorder
-            Gosu::draw_line @x, @y, color, @x, bottom_edge, color, zorder
-            Gosu::draw_line @x,bottom_edge, color, right_edge, bottom_edge, color, zorder
-            Gosu::draw_line right_edge, @y, color, right_edge, bottom_edge, color, zorder
+            Gosu::draw_line @x, @y, color, right_edge, @y, color, relative_z_order(Z_ORDER_BORDER)
+            Gosu::draw_line @x, @y, color, @x, bottom_edge, color, relative_z_order(Z_ORDER_BORDER)
+            Gosu::draw_line @x,bottom_edge, color, right_edge, bottom_edge, color, relative_z_order(Z_ORDER_BORDER)
+            Gosu::draw_line right_edge, @y, color, right_edge, bottom_edge, color, relative_z_order(Z_ORDER_BORDER)
         end
 
         def contains_click(mouse_x, mouse_y)
@@ -194,36 +209,36 @@ module Wads
             WidgetResult.new(false)
         end
 
-        def pixel_x(rel_x) 
-            @x + rel_x 
-        end 
+        def x_pixel_to_screen(x)
+            @x + x
+        end
 
-        def pixel_y(rel_y) 
-            @y + rel_y
-        end 
+        def y_pixel_to_screen(y)
+            @y + y
+        end
 
         def add_document(content, rel_x, rel_y, width, height)
-            new_doc = Document.new(content, pixel_x(rel_x), pixel_y(rel_y), width, height, @font)
+            new_doc = Document.new(content, x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height, @font)
             add_child(new_doc)
             new_doc
         end
 
         def add_button(label, rel_x, rel_y, &block)
-            new_button = Button.new(label, pixel_x(rel_x), pixel_y(rel_y), @font)
+            new_button = Button.new(label, x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), @font)
             new_button.set_action(&block)
             add_child(new_button)
             new_button
         end
 
         def add_single_select_table(rel_x, rel_y, width, height, column_headers, color = COLOR_WHITE, max_visible_rows = 10)
-            new_table = SingleSelectTable.new(pixel_x(rel_x), pixel_y(rel_y),
+            new_table = SingleSelectTable.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                               width, height, column_headers, @font, COLOR_WHITE, max_visible_rows)
             add_child(new_table)
             new_table
         end 
 
         def add_graph_display(rel_x, rel_y, width, height, graph)
-            new_graph = GraphWidget.new(pixel_x(rel_x), pixel_y(rel_y), width, height, @font, @color, graph) 
+            new_graph = GraphWidget.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height, @font, @color, graph) 
             add_child(new_graph)
             new_graph
         end
@@ -252,6 +267,14 @@ module Wads
             # Note that the draw method invoked by clients stills renders any added children
             # render is for specific drawing done by the widget
         end 
+
+        def widget_z 
+            # The relative z order compared to other widgets
+            # The absolute z order is the base plus this value.
+            # Its calculated relative so that overlay widgets can be 
+            # on top of base displays.
+            0
+        end
     end 
 
     class Text < Widget
@@ -262,7 +285,10 @@ module Wads
             @str = str
         end
         def render 
-            @font.draw_text(@str, @x, @y, Z_ORDER_TEXT, 1, 1, @color)
+            @font.draw_text(@str, @x, @y, z_order, 1, 1, @color)
+        end
+        def widget_z 
+            Z_ORDER_TEXT
         end
     end 
 
@@ -286,8 +312,12 @@ module Wads
             @half_size = @data_point_size / 2
             Gosu::draw_rect(@x - @half_size, @y - @half_size,
                             @data_point_size, @data_point_size,
-                            @color, Z_ORDER_PLOT_POINTS) 
+                            @color, z_order) 
         end 
+
+        def widget_z 
+            Z_ORDER_PLOT_POINTS
+        end
 
         def to_display 
             "#{@x}, #{@y}"
@@ -327,8 +357,12 @@ module Wads
         def render 
             draw_border(@color)
             text_x = center_x - (@text_pixel_width / 2)
-            @font.draw_text(@label, text_x, @y, Z_ORDER_TEXT, 1, 1, @text_color)
+            @font.draw_text(@label, text_x, @y, z_order, 1, 1, @text_color)
         end 
+
+        def widget_z 
+            Z_ORDER_TEXT
+        end
 
         def set_action(&block) 
             @action_code = block
@@ -354,10 +388,14 @@ module Wads
         def render 
             y = @y + 4
             @lines.each do |line|
-                @font.draw_text(line, @x + 5, y, Z_ORDER_TEXT, 1, 1, COLOR_WHITE)
+                @font.draw_text(line, @x + 5, y, z_order, 1, 1, COLOR_WHITE)
                 y = y + 26
             end
         end 
+
+        def widget_z 
+            Z_ORDER_TEXT
+        end
     end 
 
     class InfoBox < Widget 
@@ -372,6 +410,7 @@ module Wads
             @ok_button = Button.new("OK", center_x - 50, bottom_edge - 26, @font, 100, COLOR_FORM_BUTTON)
             add_child(@ok_button) 
             set_background(COLOR_GRAY)
+            @base_z = 10
         end
 
         def button_down id, mouse_x, mouse_y
@@ -512,7 +551,11 @@ module Wads
         end
 
         def render
-            Gosu::draw_line x, y, @color, x2, y2, @color, Z_ORDER_GRAPHIC_ELEMENTS
+            Gosu::draw_line x, y, @color, x2, y2, @color, z_order
+        end
+
+        def widget_z 
+            Z_ORDER_GRAPHIC_ELEMENTS
         end
     end 
 
@@ -541,9 +584,13 @@ module Wads
         def render
             text_pixel_width = @font.text_width(@label)
             Gosu::draw_line @x - 20, @y, @color,
-                            @x, @y, @color, Z_ORDER_GRAPHIC_ELEMENTS
+                            @x, @y, @color, z_order
             
             @font.draw_text(@label, @x - text_pixel_width - 28, @y - 12, 1, 1, 1, @color)
+        end
+
+        def widget_z 
+            Z_ORDER_GRAPHIC_ELEMENTS
         end
     end 
 
@@ -559,7 +606,11 @@ module Wads
         def render
             text_pixel_width = @font.text_width(@label)
             Gosu::draw_line @x, @y, @color, @x, @y + 20, @color
-            @font.draw_text(@label, @x - (text_pixel_width / 2), @y + 26, Z_ORDER_TEXT, 1, 1, @color)
+            @font.draw_text(@label, @x - (text_pixel_width / 2), @y + 26, z_order, 1, 1, @color)
+        end
+
+        def widget_z 
+            Z_ORDER_TEXT
         end
     end 
 
@@ -627,14 +678,14 @@ module Wads
             if number_of_columns > 1
                 (0..number_of_columns-2).each do |c| 
                     x = x + column_widths[c] + 20
-                    Gosu::draw_line x, @y, @color, x, @y + @height, @color, Z_ORDER_GRAPHIC_ELEMENTS
+                    Gosu::draw_line x, @y, @color, x, @y + @height, @color, z_order
                 end 
             end
 
             y = @y             
             x = @x + 20
             (0..number_of_columns-1).each do |c| 
-                @font.draw_text(@headers[c], x, y, Z_ORDER_TEXT, 1, 1, @color)
+                @font.draw_text(@headers[c], x, y, z_order, 1, 1, @color)
                 x = x + column_widths[c] + 20
             end
             y = y + 30
@@ -646,7 +697,7 @@ module Wads
                 elsif count < @current_row + @max_visible_rows
                     x = @x + 20
                     (0..number_of_columns-1).each do |c| 
-                        @font.draw_text(row[c], x, y + 2, Z_ORDER_TEXT, 1, 1, @row_colors[count])
+                        @font.draw_text(row[c], x, y + 2, z_order, 1, 1, @row_colors[count])
                         x = x + column_widths[c] + 20
                     end
                     y = y + 30
@@ -662,6 +713,10 @@ module Wads
                 return nil 
             end 
             row_number
+        end
+
+        def widget_z 
+            Z_ORDER_TEXT
         end
     end
 
@@ -693,9 +748,13 @@ module Wads
             if @selected_row 
                 if @selected_row >= @current_row and @selected_row < @current_row + @max_visible_rows
                     y = @y + 30 + ((@selected_row - @current_row) * 30)
-                    Gosu::draw_rect(@x + 20, y, @width - 30, 28, @selected_color, Z_ORDER_SELECTION_BACKGROUND) 
+                    Gosu::draw_rect(@x + 20, y, @width - 30, 28, @selected_color, relative_z_order(Z_ORDER_SELECTION_BACKGROUND)) 
                 end 
             end
+        end
+
+        def widget_z 
+            Z_ORDER_TEXT
         end
     end 
 
@@ -740,11 +799,15 @@ module Wads
             row_count = @current_row
             while row_count < @data_rows.size
                 if @selected_rows.include? row_count
-                    Gosu::draw_rect(@x + 20, y, @width - 30, 28, @selection_color, Z_ORDER_SELECTION_BACKGROUND) 
+                    Gosu::draw_rect(@x + 20, y, @width - 30, 28, @selection_color, relative_z_order(Z_ORDER_SELECTION_BACKGROUND)) 
                 end 
                 y = y + 30
                 row_count = row_count + 1
             end
+        end
+
+        def widget_z 
+            Z_ORDER_TEXT
         end
     end 
 
@@ -857,14 +920,6 @@ module Wads
             (@height.to_f * y_pct).round
         end
 
-        def x_pixel_to_screen(x)
-            @x + x
-        end
-
-        def y_pixel_to_screen(y)
-            @y + y
-        end
-
         def draw_x(x)
             x_pixel_to_screen(x_val_to_pixel(x)) 
         end 
@@ -894,7 +949,7 @@ module Wads
             if points.length > 1
                 points.inject(points[0]) do |last, the_next|
                     Gosu::draw_line last.x, last.y, last.color,
-                                    the_next.x, the_next.y, last.color, Z_ORDER_GRAPHIC_ELEMENTS
+                                    the_next.x, the_next.y, last.color, relative_z_order(Z_ORDER_GRAPHIC_ELEMENTS)
                     the_next
                 end
             end
@@ -971,7 +1026,7 @@ module Wads
 
         def render 
             super 
-            draw_background(Z_ORDER_OVERLAY_BACKGROUND)
+            draw_background(Z_ORDER_FOCAL_ELEMENTS)
             draw_shadow(COLOR_GRAY)
         end
     end 
@@ -1108,7 +1163,7 @@ module Wads
                         else
                             Gosu::draw_line rendered_node.center_x, rendered_node.center_y, rendered_node.color,
                                     connected_rendered_node.center_x, connected_rendered_node.center_y, connected_rendered_node.color,
-                                    Z_ORDER_GRAPHIC_ELEMENTS
+                                    relative_z_order(Z_ORDER_GRAPHIC_ELEMENTS)
                         end
                     end
                 end 

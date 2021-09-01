@@ -421,7 +421,12 @@ module Wads
                 end
             end
             map = {}
-            map[node.name] = node
+            if node.visited 
+                return {} 
+            else
+                map[node.name] = node
+                node.visited = true
+            end
             node.backlinks.each do |child|
                 map_from_child = traverse_and_collect_nodes(child, max_depth, current_depth + 1)
                 map_from_child.each do |key, value|

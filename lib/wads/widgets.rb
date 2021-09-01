@@ -1099,6 +1099,7 @@ module Wads
 
         def set_center_node(center_node, max_depth = -1)
             # Determine the list of nodes to draw
+            @graph.reset_visited 
             @visible_data_nodes = @graph.traverse_and_collect_nodes(center_node, max_depth)
 
             # Convert the data nodes to rendered nodes

@@ -9,12 +9,14 @@ class TextField < Gosu::TextInput
   PADDING = 5
   
   attr_reader :x, :y
+  attr_accessor :base_z
   
   def initialize(window, font, x, y, original_text, default_width)
     super()
     
     @window, @font, @x, @y = window, font, x, y
     @default_width = default_width
+    @base_z = 0
     self.text = original_text
   end
   
@@ -29,7 +31,7 @@ class TextField < Gosu::TextInput
     @window.draw_quad(x - PADDING,         y - PADDING,          background_color,
                       x + width + PADDING, y - PADDING,          background_color,
                       x - PADDING,         y + height + PADDING, background_color,
-                      x + width + PADDING, y + height + PADDING, background_color, 9)
+                      x + width + PADDING, y + height + PADDING, background_color, @base_z + 9)
     
     # Calculate the position of the caret and the selection start.
     pos_x = x + @font.text_width(self.text[0...self.caret_pos])
@@ -40,16 +42,16 @@ class TextField < Gosu::TextInput
     @window.draw_quad(sel_x, y,          SELECTION_COLOR,
                       pos_x, y,          SELECTION_COLOR,
                       sel_x, y + height, SELECTION_COLOR,
-                      pos_x, y + height, SELECTION_COLOR, 50)
+                      pos_x, y + height, SELECTION_COLOR, @base_z + 10)
 
     # Draw the caret; again, only if this is the currently selected field.
     if @window.text_input == self then
       @window.draw_line(pos_x, y,          CARET_COLOR,
-                        pos_x, y + height, CARET_COLOR, 50)
+                        pos_x, y + height, CARET_COLOR, @base_z + 10)
     end
 
     # Finally, draw the text itself!
-    @font.draw_text(self.text, x, y, 50)
+    @font.draw_text(self.text, x, y, @base_z + 10)
   end
 
   # This text field grows with the text that's being entered.
@@ -71,6 +73,10 @@ class TextField < Gosu::TextInput
     mouse_x > x - PADDING and mouse_x < x + width + PADDING and
       mouse_y > y - PADDING and mouse_y < y + height + PADDING
   end
+
+  def contains_click(mouse_x, mouse_y)
+    under_point?(mouse_x, mouse_y)
+  end
   
   # Tries to move the caret to the position specifies by mouse_x
   def move_caret(mouse_x)
@@ -83,5 +89,21 @@ class TextField < Gosu::TextInput
     end
     # Default case: user must have clicked the right edge
     self.caret_pos = self.selection_start = self.text.length
+  end
+
+  def handle_mouse_down mouse_x, mouse_y
+    # empty base implementation
+  end
+
+  def handle_mouse_up mouse_x, mouse_y
+      # empty base implementation
+  end
+
+  def handle_key_press id, mouse_x, mouse_y
+      # empty base implementation
+  end
+
+  def handle_update update_count, mouse_x, mouse_y
+      # empty base implementation
   end
 end

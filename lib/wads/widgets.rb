@@ -58,7 +58,6 @@ module Wads
             @visible = true 
             @children = []
             @base_z = 0
-            @widget_z
         end
 
         def z_order 
@@ -217,8 +216,16 @@ module Wads
             @y + y
         end
 
+        def add_text(message, rel_x, rel_y)
+            new_text = Text.new(message, x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), @font)
+            new_text.base_z = @base_z
+            add_child(new_text)
+            new_text
+        end 
+
         def add_document(content, rel_x, rel_y, width, height)
             new_doc = Document.new(content, x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height, @font)
+            new_doc.base_z = @base_z
             add_child(new_doc)
             new_doc
         end
@@ -226,19 +233,30 @@ module Wads
         def add_button(label, rel_x, rel_y, &block)
             new_button = Button.new(label, x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), @font)
             new_button.set_action(&block)
+            new_button.base_z = @base_z
             add_child(new_button)
             new_button
         end
 
+        def add_table(rel_x, rel_y, width, height, column_headers, color = COLOR_WHITE, max_visible_rows = 10)
+            new_table = Table.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
+                              width, height, column_headers, @font, color, max_visible_rows)
+            new_table.base_z = @base_z
+            add_child(new_table)
+            new_table
+        end 
+
         def add_single_select_table(rel_x, rel_y, width, height, column_headers, color = COLOR_WHITE, max_visible_rows = 10)
             new_table = SingleSelectTable.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
-                              width, height, column_headers, @font, COLOR_WHITE, max_visible_rows)
+                              width, height, column_headers, @font, color, max_visible_rows)
+            new_table.base_z = @base_z
             add_child(new_table)
             new_table
         end 
 
         def add_graph_display(rel_x, rel_y, width, height, graph)
             new_graph = GraphWidget.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height, @font, @color, graph) 
+            new_graph.base_z = @base_z
             add_child(new_graph)
             new_graph
         end
@@ -336,6 +354,8 @@ module Wads
 
     class Button < Widget
         attr_accessor :label
+        attr_accessor :width
+        attr_accessor :text_color
         attr_accessor :is_pressed
         attr_accessor :action_code
 
@@ -404,24 +424,22 @@ module Wads
             set_font(font)
             set_dimensions(width, height)
             set_border(COLOR_WHITE)
-            @title = title
-            add_child(Text.new(title, x + 5, y + 5, Gosu::Font.new(32)))
-            add_child(Document.new(content, x + 5, y + 52, width, height - 52, font))
-            @ok_button = Button.new("OK", center_x - 50, bottom_edge - 26, @font, 100, COLOR_FORM_BUTTON)
-            add_child(@ok_button) 
-            set_background(COLOR_GRAY)
+            set_background(COLOR_OFF_GRAY)
             @base_z = 10
+            add_text(title, 5, 5)
+            add_document(content, 5, 52, width, height - 52)
+            ok_button = add_button("OK", (@width / 2) - 50, height - 26) do
+                WidgetResult.new(true)
+            end
+            ok_button.text_color = COLOR_WHITE
+            ok_button.width = 100
         end
 
-        def button_down id, mouse_x, mouse_y
+        def handle_key_press id, mouse_x, mouse_y
             if id == Gosu::KbEscape
                 return WidgetResult.new(true) 
-            elsif id == Gosu::MsLeft
-                if @ok_button.contains_click(mouse_x, mouse_y)
-                    return WidgetResult.new(true) 
-                end
             end
-            WidgetResult.new(false)
+            nil
         end
     end
 
@@ -433,23 +451,34 @@ module Wads
             @window = window
             set_font(font)
             set_dimensions(width, height)
-            set_background(0xff566573 )
+            set_background(COLOR_OFF_GRAY)
             set_border(COLOR_WHITE)
+            @base_z = 10
             @error_message = nil
 
-            add_child(Text.new(title, x + 5, y + 5, @font))
+            add_text(title, 5, 5)
             # Forms automatically have some explanatory content
-            add_child(Document.new(content, x, y + 56, width, height, font))
+            add_document(content, 0, 56, width, height)
 
             # Forms automatically get a text input widget
             @textinput = TextField.new(@window, @font, x + 10, bottom_edge - 80, text_input_default, 600)
+            @textinput.base_z = 10
             add_child(@textinput)
 
             # Forms automatically get OK and Cancel buttons
-            @ok_button = Button.new("OK", center_x - 100, bottom_edge - 26, @font, 100, COLOR_FORM_BUTTON, COLOR_WHITE)
-            @cancel_button = Button.new("Cancel", center_x + 50, bottom_edge - 26, @font, 100, COLOR_FORM_BUTTON, COLOR_WHITE)
-            add_child(@ok_button) 
-            add_child(@cancel_button)
+            ok_button = add_button("OK", (@width / 2) - 100, height - 32) do
+                handle_ok
+            end
+            ok_button.color = COLOR_FORM_BUTTON
+            ok_button.text_color = COLOR_WHITE
+            ok_button.width = 100
+
+            cancel_button = add_button("Cancel", (@width / 2) + 50, height - 32) do
+                WidgetResult.new(true)
+            end
+            cancel_button.color = COLOR_FORM_BUTTON
+            cancel_button.text_color = COLOR_WHITE
+            cancel_button.width = 100
         end
 
         def content 
@@ -472,21 +501,7 @@ module Wads
         def handle_ok
             # Default behavior is to do nothing except tell the caller to 
             # close the dialog
-            return WidgetResult.new(true) 
-        end
-
-        def handle_cancel
-            # Default behavior is to do nothing except tell the caller to 
-            # close the dialog
-            return WidgetResult.new(true) 
-        end
-
-        def handle_up(mouse_x, mouse_y)
-            # empty implementation of up arrow
-        end
-
-        def handle_down(mouse_x, mouse_y)
-            # empty implementation of down arrow
+            return WidgetResult.new(true, "OK") 
         end
 
         def handle_mouse_click(mouse_x, mouse_y)
@@ -499,32 +514,22 @@ module Wads
             # in text widget
         end 
 
-        def button_down id, mouse_x, mouse_y
+        def handle_mouse_down mouse_x, mouse_y
+            # Mouse click: Select text field based on mouse position.
+            @window.text_input = [@textinput].find { |tf| tf.under_point?(mouse_x, mouse_y) }
+            # Advanced: Move caret to clicked position
+            @window.text_input.move_caret(mouse_x) unless @window.text_input.nil?
+
+            handle_mouse_click(mouse_x, mouse_y)
+        end 
+
+        def handle_key_press id, mouse_x, mouse_y
             if id == Gosu::KbEscape
                 return WidgetResult.new(true) 
-            elsif id == Gosu::KbUp
-                handle_up(mouse_x, mouse_y)
-            elsif id == Gosu::KbDown
-                handle_down(mouse_x, mouse_y)
-            elsif id == Gosu::MsLeft
-                if @ok_button.contains_click(mouse_x, mouse_y)
-                    return handle_ok
-                elsif @cancel_button.contains_click(mouse_x, mouse_y)
-                    return handle_cancel 
-                else 
-                    # Mouse click: Select text field based on mouse position.
-                    @window.text_input = [@textinput].find { |tf| tf.under_point?(mouse_x, mouse_y) }
-                    # Advanced: Move caret to clicked position
-                    @window.text_input.move_caret(mouse_x) unless @window.text_input.nil?
-
-                    handle_mouse_click(mouse_x, mouse_y)
-                end
-            else 
-                if @window.text_input
-                    text_input_updated(@textinput.text)
-                end
+            elsif @window.text_input
+                text_input_updated(@textinput.text)
             end
-            WidgetResult.new(false)
+            nil
         end
     end 
 
@@ -1029,6 +1034,10 @@ module Wads
             draw_background(Z_ORDER_FOCAL_ELEMENTS)
             draw_shadow(COLOR_GRAY)
         end
+    
+        def widget_z 
+            Z_ORDER_TEXT
+        end
     end 
 
     class GraphWidget < Widget
@@ -1142,6 +1151,9 @@ module Wads
                                                         get_node_color(data_node),
                                                         get_node_color(data_node))
                 end
+            end
+            @rendered_nodes.values.each do |rn|
+                rn.base_z = @base_z
             end
         end
 

@@ -313,8 +313,8 @@ module Wads
                 node = node_queue.shift
                 yield node
                 node.outputs.each do |c|
-                    if child.is_a? Edge 
-                        child = child.destination 
+                    if c.is_a? Edge 
+                        c = c.destination 
                     end 
                     node_queue << c
                 end
@@ -538,34 +538,57 @@ module Wads
         end
 
         def grid_line_x_values
-            divide_range_into_values(@x_range, @left_x, @right_x)
+            if @cached_grid_line_x_values
+                return @cached_grid_line_x_values 
+            end
+            @cached_grid_line_x_values = divide_range_into_values(@x_range, @left_x, @right_x, false)
+            @cached_grid_line_x_values
         end
 
         def grid_line_y_values
-            divide_range_into_values(@y_range, @left_y, @right_y)
+            if @cached_grid_line_y_values
+                return @cached_grid_line_y_values 
+            end
+            @cached_grid_line_y_values = divide_range_into_values(@y_range, @bottom_y, @top_y, false)
+            @cached_grid_line_y_values
+        end
+
+        def calc_x_values
+            if @cached_calc_x_values
+                return @cached_calc_x_values 
+            end
+            @cached_calc_x_values = divide_range_into_values(@x_range, @left_x, @right_x)
+            puts "The x_axis value to calculate are: #{@cached_calc_x_values}"
+            @cached_calc_x_values
+        end
+
+        def clear_cache
+            @cached_grid_line_x_values = nil
+            @cached_grid_line_y_values = nil
+            @cached_calc_x_values = nil
         end
 
         # This method determines what are equidistant points along
         # the x-axis that we can use to draw gridlines and calculate
         # derived values from functions
-        def divide_range_into_values(range_size, start_value, end_value)
+        def divide_range_into_values(range_size, start_value, end_value, is_derived_values = true)
             values = []
             # How big is x-range? What should the step size be?
             # Generally we want a hundred display points. Let's start there.
             if range_size < 1.1
-                step_size = 0.01
+                step_size = is_derived_values ? 0.01 : 0.1
             elsif range_size < 11
-                step_size = 0.1
+                step_size = is_derived_values ? 0.1 : 1
             elsif range_size < 111
-                step_size = 1
+                step_size = is_derived_values ? 1 : 10
             elsif range_size < 1111
-                step_size = 10
+                step_size = is_derived_values ? 10 : 100
             elsif range_size < 11111
-                step_size = 100
+                step_size = is_derived_values ? 100 : 1000
             elsif range_size < 111111
-                step_size = 1000
+                step_size = is_derived_values ? 1000 : 10000
             else 
-                step_size = 10000
+                step_size = is_derived_values ? 10000 : 100000
             end
             grid_x = start_value
             while grid_x < end_value

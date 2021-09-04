@@ -830,6 +830,7 @@ module Wads
         attr_accessor :display_grid
         attr_accessor :display_lines
         attr_accessor :zoom_level
+        attr_accessor :visibility_map
 
         def initialize(x, y, width, height, font) 
             super x, y, color 
@@ -837,15 +838,24 @@ module Wads
             set_dimensions(width, height)
             @display_grid = false
             @display_lines = true
-            @grid_line_color = COLOR_CYAN
+            @grid_line_color = COLOR_LIGHT_GRAY
             @cursor_line_color = COLOR_DARK_GRAY 
-            @zero_line_color = COLOR_BLUE 
+            @zero_line_color = COLOR_HEADER_BRIGHT_BLUE 
             @zoom_level = 1
             @data_point_size = 4
             # Hash of rendered points keyed by data set name, so we can toggle visibility
             @points_by_data_set_name = {}
+            @visibility_map = {}
         end
 
+        def toggle_visibility(data_set_name)
+            is_visible = @visibility_map[data_set_name]
+            if is_visible.nil?
+                return
+            end
+            @visibility_map[data_set_name] = !is_visible
+        end
+ 
         def increase_data_point_size
             @data_point_size = @data_point_size + 2
         end 
@@ -900,6 +910,7 @@ module Wads
         def add_data_set(data_set_name, rendered_points)
             if range_set?
                 @points_by_data_set_name[data_set_name] = rendered_points
+                @visibility_map[data_set_name] = true
             else
                 puts "ERROR: range not set, cannot add data"
             end
@@ -925,22 +936,23 @@ module Wads
 
         def render
             @points_by_data_set_name.keys.each do |key|
-                data_set_points = @points_by_data_set_name[key]
-                # if data_set.visible    TODO need our own setting for if its visible
-                data_set_points.each do |point| 
-                    if is_on_screen(point)
-                        #puts "The point is on screen"
-                        point.render(@data_point_size)
-                    else
-                        #puts "The point is NOT on screen"
+                if @visibility_map[key]
+                    data_set_points = @points_by_data_set_name[key]
+                    data_set_points.each do |point| 
+                        if is_on_screen(point)
+                            #puts "The point is on screen"
+                            point.render(@data_point_size)
+                        else
+                            #puts "The point is NOT on screen"
+                        end
+                    end 
+                    if @display_lines 
+                        display_lines_for_point_set(data_set_points) 
                     end
-                end 
-                if @display_lines 
-                    display_lines_for_point_set(data_set_points) 
                 end
-            end
-            if @display_grid and range_set?
-                display_grid_lines
+                if @display_grid and range_set?
+                    display_grid_lines
+                end
             end
         end
 
@@ -955,36 +967,32 @@ module Wads
         end
 
         def display_grid_lines
-            # TODO this is not working well for large ranges with the given increment of 1
-            # We don't want to draw hundreds of grid lines
             grid_widgets = []
 
-            grid_x = @visible_range.left_x
-            grid_y = @visible_range.bottom_y + 1
-            while grid_y < @visible_range.top_y
+            x_lines = @visible_range.grid_line_x_values
+            y_lines = @visible_range.grid_line_y_values
+            first_x = draw_x(@visible_range.left_x)
+            last_x = draw_x(@visible_range.right_x)
+            first_y = draw_y(@visible_range.bottom_y)
+            last_y = draw_y(@visible_range.top_y)
+
+            x_lines.each do |grid_x|
                 dx = draw_x(grid_x)
+                color = @grid_line_color
+                if grid_x == 0 and grid_x != @visible_range.left_x.to_i
+                    color = @zero_line_color 
+                end    
+                grid_widgets << Line.new(dx, first_y, dx, last_y, color) 
+            end
+
+            y_lines.each do |grid_y| 
                 dy = draw_y(grid_y)
-                last_x = draw_x(@visible_range.right_x)
                 color = @grid_line_color
                 if grid_y == 0 and grid_y != @visible_range.bottom_y.to_i
                     color = @zero_line_color
                 end
-                grid_widgets << Line.new(dx, dy, last_x, dy, color) 
-                grid_y = grid_y + 1
-            end
-            grid_x = @visible_range.left_x + 1
-            grid_y = @visible_range.bottom_y
-            while grid_x < @visible_range.right_x
-                dx = draw_x(grid_x)
-                dy = draw_y(grid_y)
-                last_y = draw_y(@visible_range.top_y)
-                color = @grid_line_color
-                if grid_x == 0 and grid_x != @visible_range.left_x.to_i
-                    color = @zero_line_color 
-                end
-                grid_widgets << Line.new(dx, dy, dx, last_y, color) 
-                grid_x = grid_x + 1
-            end
+                grid_widgets << Line.new(first_x, dy, last_x, dy, color) 
+            end 
 
             grid_widgets.each do |gw| 
                 gw.draw 

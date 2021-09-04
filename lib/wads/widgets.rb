@@ -319,17 +319,25 @@ module Wads
     end 
 
     class PlotPoint < Widget
+        attr_accessor :data_x
+        attr_accessor :data_y
         attr_accessor :data_point_size 
 
-        def initialize(x, y, color = COLOR_MAROON, size = 4) 
-            super(x, y, color) 
+        def initialize(x, y, data_x, data_y, color = COLOR_MAROON, size = 4) 
+            super(x, y, color)
+            @data_x = data_x
+            @data_y = data_y
             @data_point_size = size
         end
 
-        def render 
-            @half_size = @data_point_size / 2
-            Gosu::draw_rect(@x - @half_size, @y - @half_size,
-                            @data_point_size, @data_point_size,
+        def render(override_size = nil)
+            size_to_draw = @data_point_size
+            if override_size 
+                size_to_draw = override_size 
+            end
+            half_size = size_to_draw / 2
+            Gosu::draw_rect(@x - half_size, @y - half_size,
+                            size_to_draw, size_to_draw,
                             @color, z_order) 
         end 
 
@@ -829,28 +837,22 @@ module Wads
             set_dimensions(width, height)
             @display_grid = false
             @display_lines = true
-            @data_set_hash = {}
             @grid_line_color = COLOR_CYAN
             @cursor_line_color = COLOR_DARK_GRAY 
             @zero_line_color = COLOR_BLUE 
             @zoom_level = 1
+            @data_point_size = 4
+            # Hash of rendered points keyed by data set name, so we can toggle visibility
+            @points_by_data_set_name = {}
         end
 
-        def increase_data_point_size 
-            @data_set_hash.keys.each do |key|
-                data_set = @data_set_hash[key]
-                data_set.rendered_points.each do |point| 
-                    point.increase_size 
-                end
-            end
+        def increase_data_point_size
+            @data_point_size = @data_point_size + 2
         end 
 
         def decrease_data_point_size 
-            @data_set_hash.keys.each do |key|
-                data_set = @data_set_hash[key]
-                data_set.rendered_points.each do |point| 
-                    point.decrease_size 
-                end
+            if @data_point_size > 2
+                @data_point_size = @data_point_size - 2
             end
         end
 
@@ -885,11 +887,6 @@ module Wads
         def define_range(range)
             @visible_range = range
             @zoom_level = 1
-            @data_set_hash.keys.each do |key|
-                data_set = @data_set_hash[key]
-                puts "Calling derive values on #{key}"
-                data_set.derive_values(range, @data_set_hash)
-            end
         end 
 
         def range_set?
@@ -897,19 +894,12 @@ module Wads
         end 
 
         def is_on_screen(point) 
-            point.x >= @visible_range.left_x and point.x <= @visible_range.right_x and point.y >= @visible_range.bottom_y and point.y <= @visible_range.top_y
+            point.data_x >= @visible_range.left_x and point.data_x <= @visible_range.right_x and point.data_y >= @visible_range.bottom_y and point.data_y <= @visible_range.top_y
         end 
 
-        def add_data_set(data_set)
+        def add_data_set(data_set_name, rendered_points)
             if range_set?
-                @data_set_hash[data_set.name] = data_set
-                data_set.clear_rendered_points
-                data_set.derive_values(@visible_range, @data_set_hash)
-                data_set.data_points.each do |point|
-                    if is_on_screen(point) 
-                        data_set.add_rendered_point PlotPoint.new(draw_x(point.x), draw_y(point.y), data_set.color, data_set.data_point_size)
-                    end
-                end
+                @points_by_data_set_name[data_set_name] = rendered_points
             else
                 puts "ERROR: range not set, cannot add data"
             end
@@ -934,15 +924,19 @@ module Wads
         end 
 
         def render
-            @data_set_hash.keys.each do |key|
-                data_set = @data_set_hash[key]
-                if data_set.visible
-                    data_set.rendered_points.each do |point| 
-                        point.draw 
-                    end 
-                    if @display_lines 
-                        display_lines_for_point_set(data_set.rendered_points) 
+            @points_by_data_set_name.keys.each do |key|
+                data_set_points = @points_by_data_set_name[key]
+                # if data_set.visible    TODO need our own setting for if its visible
+                data_set_points.each do |point| 
+                    if is_on_screen(point)
+                        #puts "The point is on screen"
+                        point.render(@data_point_size)
+                    else
+                        #puts "The point is NOT on screen"
                     end
+                end 
+                if @display_lines 
+                    display_lines_for_point_set(data_set_points) 
                 end
             end
             if @display_grid and range_set?
@@ -961,7 +955,7 @@ module Wads
         end
 
         def display_grid_lines
-            # TODO this is bnot working well for large ranges with the given increment of 1
+            # TODO this is not working well for large ranges with the given increment of 1
             # We don't want to draw hundreds of grid lines
             grid_widgets = []
 

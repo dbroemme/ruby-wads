@@ -56,6 +56,7 @@ module Wads
         attr_accessor :font
         attr_accessor :children
         attr_accessor :overlay_widget
+        attr_accessor :debug_off
 
         def initialize(x, y, color = COLOR_CYAN) 
             @x = x 
@@ -66,6 +67,7 @@ module Wads
             @visible = true 
             @children = []
             @base_z = 0
+            @debug_off = true
         end
 
         def z_order 
@@ -183,6 +185,7 @@ module Wads
         end
 
         def button_down(id, mouse_x, mouse_y)
+            puts "Base widget #{self.class.name} button down #{id}." unless @debug_off
             if @overlay_widget 
                 result = @overlay_widget.button_down(id, mouse_x, mouse_y)
                 if not result.nil? and result.is_a? WidgetResult
@@ -206,6 +209,7 @@ module Wads
             end
 
             if not result.nil? and result.is_a? WidgetResult
+                puts "Base widget #{self.class.name} returning own #{result}" unless @debug_off
                 return result 
             end
 
@@ -215,6 +219,7 @@ module Wads
                         result = child.button_down id, mouse_x, mouse_y
                         if not result.nil? and result.is_a? WidgetResult
                             intercept_widget_event(result)
+                            puts "Base widget #{self.class.name} returning child #{result}" unless @debug_off
                             return result 
                         end
                     end 
@@ -222,6 +227,7 @@ module Wads
                     result = child.button_down id, mouse_x, mouse_y
                     if not result.nil? and result.is_a? WidgetResult
                         intercept_widget_event(result)
+                        puts "Base widget #{self.class.name} returning child #{result}" unless @debug_off
                         return result 
                     end
                 end
@@ -620,6 +626,7 @@ module Wads
 
         def add_error_message(msg) 
             @error_message = ErrorMessage.new(msg, x + 10, bottom_edge - 120, @font)
+            @error_message.base_z = @base_z
         end 
 
         def render 
@@ -757,7 +764,9 @@ module Wads
             @current_row = 0
             @max_visible_rows = max_visible_rows
             clear_rows
-            @can_delete_rows = false   
+            @can_delete_rows = false
+            @delete_buttons = []
+            @next_delete_button_y = 34
         end
 
         def scroll_up 
@@ -780,9 +789,43 @@ module Wads
         def add_row(data_row, color = @color)
             @data_rows << data_row
             @row_colors << color
+        end
+
+        def add_table_delete_button 
+            if @delete_buttons.size < @max_visible_rows
+                new_button = add_delete_button(@width - 25, @next_delete_button_y) do
+                    # nothing to do here, handled in parent widget by event
+                end
+                @delete_buttons << new_button
+                @next_delete_button_y = @next_delete_button_y + 30
+            end
+        end
+
+        def remove_table_delete_button 
+            if not @delete_buttons.empty?
+                @delete_buttons.pop
+                @children.pop
+                @next_delete_button_y = @next_delete_button_y - 30
+            end
+        end
+
+        def handle_update update_count, mouse_x, mouse_y
+            # How many visible data rows are there
             if @can_delete_rows
-                add_delete_button(@width - 25, (@data_rows.size * 30) + 4) do
-                    puts "Hit the table delete button"
+                number_of_visible_rows = @data_rows.size - @current_row
+                if number_of_visible_rows > @max_visible_rows
+                    number_of_visible_rows = @max_visible_rows
+                end
+                if number_of_visible_rows > @delete_buttons.size
+                    number_to_add = number_of_visible_rows - @delete_buttons.size 
+                    number_to_add.times do 
+                        add_table_delete_button 
+                    end 
+                elsif number_of_visible_rows < @delete_buttons.size
+                    number_to_remove = @delete_buttons.size - number_of_visible_rows  
+                    number_to_remove.times do 
+                        remove_table_delete_button 
+                    end 
                 end
             end
         end
@@ -793,6 +836,7 @@ module Wads
 
         def render
             draw_border
+            draw_delete_buttons 
             return unless number_of_rows > 0
 
             column_widths = []
@@ -839,6 +883,14 @@ module Wads
                 count = count + 1
             end
         end
+
+        def draw_delete_buttons 
+            if @can_delete_rows
+                @delete_buttons.each do |db| 
+                    db.render 
+                end
+            end
+        end 
 
         def determine_row_number(mouse_y)
             relative_y = mouse_y - @y
@@ -955,16 +1007,12 @@ module Wads
                 row_number = determine_row_number(mouse_y)
                 # First check if its the delete button that got this
                 delete_this_row = false
-                @children.each do |child|
-                    if child.is_a? DeleteButton 
-                        if child.contains_click(mouse_x, mouse_y)
-                            delete_this_row = true 
-                        end 
+                @delete_buttons.each do |db|
+                    if db.contains_click(mouse_x, mouse_y)
+                        delete_this_row = true 
                     end 
                 end 
                 if delete_this_row
-                    # TODO remove from the widget display and then
-                    # send the event so the plotter can take its action
                     if not row_number.nil?
                        data_set_row_to_delete = @current_row + row_number
                        data_set_name_to_delete = @data_rows[data_set_row_to_delete][1]
@@ -982,7 +1030,6 @@ module Wads
                 end
             end
         end
-
     end 
 
     class Plot < Widget

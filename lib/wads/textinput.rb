@@ -100,7 +100,6 @@ class TextField < Gosu::TextInput
       if @old_value == self.text
         # nothing to do
       else 
-        puts "Textfield change to text value. Key was entered [#{@old_value} == #{self.text}]"
         @old_value = self.text
         return WidgetResult.new(false, EVENT_TEXT_INPUT, [self.text])
       end

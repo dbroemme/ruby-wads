@@ -59,7 +59,7 @@ class WadsSampleApp < Gosu::Window
             puts "Select one of the following sample analysis options"
             puts "-s   Run sample stocks analysis"
             puts "-j   Run sample Star Wars character analysis"
-            puts "-l   Run sample analysis of lottery numbers"
+            puts "-g   Run sample graph display"
             puts " "
             exit
         end

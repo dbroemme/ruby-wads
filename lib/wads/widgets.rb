@@ -181,9 +181,7 @@ module Wads
         end
 
         def button_down(id, mouse_x, mouse_y)
-            puts "Base widget #{self.class.name} button down #{id}."
             if @overlay_widget 
-                puts "Base widget #{self.class.name} delegating to overlay widget"
                 result = @overlay_widget.button_down(id, mouse_x, mouse_y)
                 if not result.nil? and result.is_a? WidgetResult
                     intercept_widget_event(result)
@@ -204,21 +202,16 @@ module Wads
             else 
                 result = handle_key_press id, mouse_x, mouse_y
             end
-            puts "Base widget #{self.class.name} Result of mouse down: #{result.class.name}."
+
             if not result.nil? and result.is_a? WidgetResult
-                puts "Base widget #{self.class.name}   returning own #{result}"
                 return result 
             end
 
             @children.each do |child| 
-                puts "Checking child #{child.class.name}"
                 if id == Gosu::MsLeft
                     if child.contains_click(mouse_x, mouse_y) 
-                        puts "Child widget #{child.class.name} button down #{id}."
                         result = child.button_down id, mouse_x, mouse_y
-                        puts result.inspect
                         if not result.nil? and result.is_a? WidgetResult
-                            puts "Base widget #{self.class.name}   returning child #{result}"
                             intercept_widget_event(result)
                             return result 
                         end
@@ -226,7 +219,6 @@ module Wads
                 else 
                     result = child.button_down id, mouse_x, mouse_y
                     if not result.nil? and result.is_a? WidgetResult
-                        puts "Base widget #{self.class.name}   returning child #{result}"
                         intercept_widget_event(result)
                         return result 
                     end
@@ -235,8 +227,6 @@ module Wads
         end
 
         def button_up(id, mouse_x, mouse_y)
-            #puts "Base widget #{self.class.name} button up #{id}."
-            # Overlay widgets are model, they consume all events
             if @overlay_widget 
                 return @overlay_widget.button_up(id, mouse_x, mouse_y)
             end
@@ -635,7 +625,6 @@ module Wads
         end 
 
         def handle_key_press id, mouse_x, mouse_y
-            puts "Dialog handle_key_press #{id}"
             if id == Gosu::KbEscape
                 return WidgetResult.new(true) 
             end
@@ -925,9 +914,7 @@ module Wads
         end
 
         def handle_mouse_down mouse_x, mouse_y
-            puts "In table multi select handle mouse down"
             if contains_click(mouse_x, mouse_y)
-                puts "  it contains the click"
                 row_number = determine_row_number(mouse_y)
                 if is_row_selected(mouse_y)
                     unset_selected_row(mouse_y, 0)
@@ -1057,10 +1044,7 @@ module Wads
                     data_set_points = @points_by_data_set_name[key]
                     data_set_points.each do |point| 
                         if is_on_screen(point)
-                            #puts "The point is on screen"
                             point.render(@data_point_size)
-                        else
-                            #puts "The point is NOT on screen"
                         end
                     end 
                     if @display_lines 

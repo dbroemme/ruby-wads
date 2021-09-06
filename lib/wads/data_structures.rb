@@ -250,6 +250,11 @@ module Wads
         attr_accessor :visited
         attr_accessor :tags
 
+        def id 
+            # id is an alias for name
+            @name 
+        end 
+
         def initialize(name, value = nil, tags = {})
             @name = name 
             @value = value
@@ -363,6 +368,14 @@ module Wads
             @node_map = {}
         end
 
+        def add(name, value = nil, tags = {}) 
+            add_node(Node.new(name, value, tags))
+        end 
+
+        def connect(source, destination, tags = {})
+            add_edge(source, destination)
+        end
+
         def add_node(node) 
             @node_list << node 
             @node_map[node.name] = node 
@@ -396,6 +409,16 @@ module Wads
             list = []
             @node_list.each do |node|
                 if node.backlinks.empty? 
+                    list << node 
+                end  
+            end 
+            list 
+        end 
+
+        def leaf_nodes 
+            list = []
+            @node_list.each do |node|
+                if node.outputs.empty? 
                     list << node 
                 end  
             end 
@@ -445,6 +468,31 @@ module Wads
             map
         end
     end
+
+    class GraphReverseIterator
+        attr_accessor :output
+        def initialize(graph) 
+            @output = []
+            graph.root_nodes.each do |root|
+                partial_list = process_node(root)
+                @output.push(*partial_list)
+            end 
+        end 
+    
+        def process_node(node)
+            list = []
+            node.outputs.each do |child_node|
+                if child_node.is_a? Edge 
+                    child_node = child_node.destination 
+                end
+                child_list = process_node(child_node)
+                list.push(*child_list)
+            end 
+    
+            list << node
+            list
+        end    
+    end 
 
     class VisibleRange
         attr_accessor :left_x

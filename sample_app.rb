@@ -40,10 +40,16 @@ class SampleAppCommand
         desc "Run sample analysis of interactions between Star Wars"
     end
 
-    flag :gui do 
+    flag :graph do 
         short "-g"
-        long "--gui"
-        desc "Display the results using GUI widgets instead of console text"
+        long "--graph"
+        desc "Run a graph test"
+    end 
+
+    flag :text do 
+        short "-t"
+        long "--text"
+        desc "Display text only output"
     end 
 
     def run 

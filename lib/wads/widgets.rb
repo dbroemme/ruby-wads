@@ -36,6 +36,11 @@ module Wads
     Z_ORDER_FOCAL_ELEMENTS = 8
     Z_ORDER_TEXT = 9
 
+    EVENT_OK = "ok"
+    EVENT_TEXT_INPUT = "textinput"
+    EVENT_TABLE_SELECT = "tableselect"
+    EVENT_TABLE_UNSELECT = "tableunselect"
+
     class Widget 
         attr_accessor :x
         attr_accessor :y 
@@ -46,8 +51,9 @@ module Wads
         attr_accessor :width
         attr_accessor :height 
         attr_accessor :visible 
-        attr_accessor :children
         attr_accessor :font
+        attr_accessor :children
+        attr_accessor :overlay_widget
 
         def initialize(x, y, color = COLOR_CYAN) 
             @x = x 
@@ -70,6 +76,10 @@ module Wads
 
         def add_child(child) 
             @children << child 
+        end
+
+        def remove_child(child)
+            @children.delete(child)
         end
 
         def clear_children 
@@ -161,6 +171,9 @@ module Wads
         end
 
         def update(update_count, mouse_x, mouse_y)
+            if @overlay_widget 
+                @overlay_widget.update(update_count, mouse_x, mouse_y)
+            end
             handle_update(update_count, mouse_x, mouse_y) 
             @children.each do |child| 
                 child.handle_update(update_count, mouse_x, mouse_y) 
@@ -168,44 +181,83 @@ module Wads
         end
 
         def button_down(id, mouse_x, mouse_y)
-            #puts "Base widget #{self.class.name} button down #{id}."
+            puts "Base widget #{self.class.name} button down #{id}."
+            if @overlay_widget 
+                puts "Base widget #{self.class.name} delegating to overlay widget"
+                result = @overlay_widget.button_down(id, mouse_x, mouse_y)
+                if not result.nil? and result.is_a? WidgetResult
+                    intercept_widget_event(result)
+                    if result.close_widget
+                        # remove the overlay widget frmo children, set to null
+                        # hopefully this closes and gets us back to normal
+                        remove_child(@overlay_widget)
+                        @overlay_widget = nil
+                    end
+                end
+                return
+            end
+
             if id == Gosu::MsLeft
                 result = handle_mouse_down mouse_x, mouse_y
-                return result unless result.nil?
+            elsif id == Gosu::MsRight
+                result = handle_right_mouse mouse_x, mouse_y
             else 
                 result = handle_key_press id, mouse_x, mouse_y
-                return result unless result.nil?
             end
+            puts "Base widget #{self.class.name} Result of mouse down: #{result.class.name}."
+            if not result.nil? and result.is_a? WidgetResult
+                puts "Base widget #{self.class.name}   returning own #{result}"
+                return result 
+            end
+
             @children.each do |child| 
+                puts "Checking child #{child.class.name}"
                 if id == Gosu::MsLeft
                     if child.contains_click(mouse_x, mouse_y) 
-                        result = child.handle_mouse_down mouse_x, mouse_y
-                        return result unless result.nil?
+                        puts "Child widget #{child.class.name} button down #{id}."
+                        result = child.button_down id, mouse_x, mouse_y
+                        puts result.inspect
+                        if not result.nil? and result.is_a? WidgetResult
+                            puts "Base widget #{self.class.name}   returning child #{result}"
+                            intercept_widget_event(result)
+                            return result 
+                        end
                     end 
                 else 
-                    result = child.handle_key_press id, mouse_x, mouse_y
-                    return result unless result.nil?
+                    result = child.button_down id, mouse_x, mouse_y
+                    if not result.nil? and result.is_a? WidgetResult
+                        puts "Base widget #{self.class.name}   returning child #{result}"
+                        intercept_widget_event(result)
+                        return result 
+                    end
                 end
             end 
-            WidgetResult.new(false)
         end
 
         def button_up(id, mouse_x, mouse_y)
             #puts "Base widget #{self.class.name} button up #{id}."
+            # Overlay widgets are model, they consume all events
+            if @overlay_widget 
+                return @overlay_widget.button_up(id, mouse_x, mouse_y)
+            end
+            
             if id == Gosu::MsLeft
                 result = handle_mouse_up mouse_x, mouse_y
-                return result unless result.nil?
+                if not result.nil? and result.is_a? WidgetResult
+                    return result 
+                end
             end
 
             @children.each do |child| 
                 if id == Gosu::MsLeft
                     if child.contains_click(mouse_x, mouse_y) 
                         result = child.handle_mouse_up mouse_x, mouse_y
-                        return result unless result.nil?
+                        if not result.nil? and result.is_a? WidgetResult
+                            return result 
+                        end
                     end 
                 end
             end
-            WidgetResult.new(false)
         end
 
         def x_pixel_to_screen(x)
@@ -230,8 +282,12 @@ module Wads
             new_doc
         end
 
-        def add_button(label, rel_x, rel_y, &block)
+        def add_button(label, rel_x, rel_y, width = nil, &block)
             new_button = Button.new(label, x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), @font)
+            if width.nil?
+                width = 60
+            end
+            new_button.width = width
             new_button.set_action(&block)
             new_button.base_z = @base_z
             add_child(new_button)
@@ -254,11 +310,39 @@ module Wads
             new_table
         end 
 
+        def add_multi_select_table(rel_x, rel_y, width, height, column_headers, color = COLOR_WHITE, max_visible_rows = 10)
+            new_table = MultiSelectTable.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
+                              width, height, column_headers, @font, color, max_visible_rows)
+            new_table.base_z = @base_z
+            add_child(new_table)
+            new_table
+        end 
+
         def add_graph_display(rel_x, rel_y, width, height, graph)
             new_graph = GraphWidget.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height, @font, @color, graph) 
             new_graph.base_z = @base_z
             add_child(new_graph)
             new_graph
+        end
+
+        def add_plot(rel_x, rel_y, width, height)
+            new_plot = Plot.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height, @font) 
+            new_plot.base_z = @base_z
+            add_child(new_plot)
+            new_plot
+        end
+
+        def add_axis_lines(rel_x, rel_y, width, height, color)
+            new_axis_lines = AxisLines.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height, color) 
+            new_axis_lines.base_z = @base_z
+            add_child(new_axis_lines)
+            new_axis_lines
+        end
+
+        def add_overlay(overlay)
+            overlay.base_z = @base_z + 10
+            add_child(overlay)
+            @overlay_widget = overlay
         end
 
         #
@@ -269,6 +353,10 @@ module Wads
         end
 
         def handle_mouse_up mouse_x, mouse_y
+            # empty base implementation
+        end
+
+        def handle_right_mouse mouse_x, mouse_y
             # empty base implementation
         end
 
@@ -292,6 +380,11 @@ module Wads
             # Its calculated relative so that overlay widgets can be 
             # on top of base displays.
             0
+        end
+
+        def intercept_widget_event(result)
+            # Base implementation just relays the event
+            result
         end
     end 
 
@@ -362,7 +455,6 @@ module Wads
 
     class Button < Widget
         attr_accessor :label
-        attr_accessor :width
         attr_accessor :text_color
         attr_accessor :is_pressed
         attr_accessor :action_code
@@ -378,8 +470,9 @@ module Wads
                 @width = width 
             end
             @height = 26
-            @is_pressed = false
             @text_color = text_color
+            @is_pressed = false
+            @is_pressed_update_count = -100
         end
 
         def render 
@@ -397,8 +490,24 @@ module Wads
         end
 
         def handle_mouse_down mouse_x, mouse_y
+            @is_pressed = true
             if @action_code
                 @action_code.call
+            end
+        end
+
+        def handle_update update_count, mouse_x, mouse_y
+            if @is_pressed
+                @is_pressed_update_count = update_count
+                @is_pressed = false
+            end
+
+            if update_count < @is_pressed_update_count + 15
+                set_background(nil)
+            elsif contains_click(mouse_x, mouse_y)
+                set_background(COLOR_LIGHT_GRAY)
+            else 
+                set_background(nil)
             end
         end
     end 
@@ -447,8 +556,7 @@ module Wads
             if id == Gosu::KbEscape
                 return WidgetResult.new(true) 
             end
-            nil
-        end
+        end 
     end
 
     class Dialog < Widget
@@ -509,18 +617,13 @@ module Wads
         def handle_ok
             # Default behavior is to do nothing except tell the caller to 
             # close the dialog
-            return WidgetResult.new(true, "OK") 
+            return WidgetResult.new(true, EVENT_OK) 
         end
 
         def handle_mouse_click(mouse_x, mouse_y)
             # empty implementation of mouse click outside
             # of standard form elements in this dialog
         end
-
-        def text_input_updated(text)
-            # empty implementation of text being updated
-            # in text widget
-        end 
 
         def handle_mouse_down mouse_x, mouse_y
             # Mouse click: Select text field based on mouse position.
@@ -532,12 +635,10 @@ module Wads
         end 
 
         def handle_key_press id, mouse_x, mouse_y
+            puts "Dialog handle_key_press #{id}"
             if id == Gosu::KbEscape
                 return WidgetResult.new(true) 
-            elsif @window.text_input
-                text_input_updated(@textinput.text)
             end
-            nil
         end
     end 
 
@@ -822,6 +923,22 @@ module Wads
         def widget_z 
             Z_ORDER_TEXT
         end
+
+        def handle_mouse_down mouse_x, mouse_y
+            puts "In table multi select handle mouse down"
+            if contains_click(mouse_x, mouse_y)
+                puts "  it contains the click"
+                row_number = determine_row_number(mouse_y)
+                if is_row_selected(mouse_y)
+                    unset_selected_row(mouse_y, 0)
+                    return WidgetResult.new(false, EVENT_TABLE_UNSELECT, @data_rows[row_number])
+                else
+                    set_selected_row(mouse_y, 0)
+                    return WidgetResult.new(false, EVENT_TABLE_SELECT, @data_rows[row_number])
+                end
+            end
+        end
+
     end 
 
     class Plot < Widget
@@ -1083,6 +1200,60 @@ module Wads
             if @selected_node 
                 @selected_node = nil 
             end 
+        end
+
+        def set_tree_display(max_depth = -1)
+            @graph.reset_visited
+            @visible_data_nodes = @graph.node_map
+            @rendered_nodes = {}
+
+            root_nodes = @graph.root_nodes
+            number_of_root_nodes = root_nodes.size 
+            width_for_each_root_tree = @width / number_of_root_nodes
+
+            start_x = 0
+            y_level = 10
+            root_nodes.each do |root|
+                set_tree_recursive(root, start_x, start_x + width_for_each_root_tree - 1, y_level)
+                start_x = start_x + width_for_each_root_tree
+                y_level = y_level + 40
+            end
+
+            @rendered_nodes.values.each do |rn|
+                rn.base_z = @base_z
+            end
+        end 
+
+        def set_tree_recursive(current_node, start_x, end_x, y_level)
+            # Draw the current node, and then recursively divide up
+            # and call again for each of the children
+            if current_node.visited 
+                return 
+            end 
+            current_node.visited = true
+
+            @rendered_nodes[current_node.name] = NodeWidget.new(
+                    current_node,
+                    x_pixel_to_screen(start_x + ((end_x - start_x) / 2)),
+                    y_pixel_to_screen(y_level),
+                    @font,
+                    get_node_color(current_node),
+                    get_node_color(current_node))
+
+            number_of_child_nodes = current_node.outputs.size 
+            if number_of_child_nodes == 0
+                return 
+            end
+            width_for_each_child_tree = (end_x - start_x) / number_of_child_nodes
+            start_child_x = start_x + 5
+
+            current_node.outputs.each do |child| 
+                if child.is_a? Edge 
+                    child = child.destination 
+                end
+                set_tree_recursive(child, start_child_x, start_child_x + width_for_each_child_tree - 1, y_level + 40)
+                start_child_x = start_child_x + width_for_each_child_tree
+            end
         end
 
         def set_all_nodes_for_display 

@@ -33,19 +33,27 @@ class WadsSampleApp < Gosu::Window
         opts = SampleAppCommand.new.parse.run
         if opts[:stocks]
             stats = process_stock_data
-            if opts[:gui]
+            if opts[:text]
+                stats.report(Date::DAYNAMES[1..5])
+            else 
                 @display_widget = SampleStocksDisplay.new(@small_font, stats)
                 show
-            else 
-                stats.report(Date::DAYNAMES[1..5])
             end
 
         elsif opts[:jedi] 
             graph = process_star_wars_data
             @display_widget = SampleStarWarsDisplay.new(@small_font, graph)
             show
+
         elsif opts[:lottery] 
             process_lottery_data
+
+        elsif opts[:graph] 
+            graph = create_test_graph
+            if not opts[:text]
+                @display_widget = SampleGraphDisplay.new(@small_font, graph)
+                show
+            end
         else
             puts " "
             puts "Select one of the following sample analysis options"
@@ -78,8 +86,10 @@ class WadsSampleApp < Gosu::Window
         close if id == Gosu::KbEscape
         # Delegate button events to the primary display widget
         result = @display_widget.button_down id, mouse_x, mouse_y
-        if result.close_widget
-            close
+        if not result.nil? and result.is_a? WidgetResult
+            if result.close_widget
+                close
+            end
         end
     end
 
@@ -177,6 +187,22 @@ class WadsSampleApp < Gosu::Window
             graph.add_edge(character_one, character_two, edge_tags)
         end
         graph
+    end
+
+    def create_test_graph
+        g = Graph.new 
+        g.add("a")
+        g.add("b")
+        g.add("c")
+        g.add("d")
+        g.add("e")
+        g.add("f")
+        g.connect("a", "b")
+        g.connect("a", "c")
+        g.connect("b", "d")
+        g.connect("b", "e")
+        g.connect("e", "f")
+        g
     end
 end
 
@@ -294,4 +320,21 @@ class SampleStarWarsDisplay < Widget
         end
         nil
     end
+end
+
+class SampleGraphDisplay < Widget
+    attr_accessor :graph
+
+    def initialize(font, graph)
+        super(10, 100, COLOR_CYAN)
+        set_dimensions(780, 500)
+        set_font(font)
+        @graph = graph
+        exit_button = add_button("Exit", 370, @height - 30) do
+            WidgetResult.new(true)
+        end
+        exit_button.text_color = COLOR_CYAN
+        @graph_display = add_graph_display(5, 60, 770, 400, @graph)
+        @graph_display.set_tree_display
+    end 
 end

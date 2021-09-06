@@ -21,7 +21,7 @@ git clone https://github.com/dbroemme/ruby-wads.git
 cd ruby-wads
 ./bin/setup
 ./run
-./run-sample-app -s -g
+./run-sample-app -s
 ```
 
 This will run the sample NASDAQ stocks analysis that features the use of the 
@@ -31,7 +31,12 @@ You can also see the graph capabilities by running the Star Wars analysis exampl
 This uses a data set that captures all character interactions within Episode 4.
 
 ```
-./run-sample-app -j -g
+./run-sample-app -j
+```
+
+There is also a sample Graph display using the following command.
+```
+./run-sample-app -g
 ```
 
 ## References

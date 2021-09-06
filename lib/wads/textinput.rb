@@ -10,6 +10,7 @@ class TextField < Gosu::TextInput
   
   attr_reader :x, :y
   attr_accessor :base_z
+  attr_accessor :old_value
   
   def initialize(window, font, x, y, original_text, default_width)
     super()
@@ -18,6 +19,7 @@ class TextField < Gosu::TextInput
     @default_width = default_width
     @base_z = 0
     self.text = original_text
+    @old_value = self.text
   end
   
   def draw
@@ -90,6 +92,24 @@ class TextField < Gosu::TextInput
     # Default case: user must have clicked the right edge
     self.caret_pos = self.selection_start = self.text.length
   end
+
+  def button_down(id, mouse_x, mouse_y)
+    if id == Gosu::MsLeft
+      move_caret(mouse_x)
+    else 
+      if @old_value == self.text
+        # nothing to do
+      else 
+        puts "Textfield change to text value. Key was entered [#{@old_value} == #{self.text}]"
+        @old_value = self.text
+        return WidgetResult.new(false, EVENT_TEXT_INPUT, [self.text])
+      end
+    end
+  end 
+
+  def button_up(id, mouse_x, mouse_y)
+    # empty base implementation
+  end 
 
   def handle_mouse_down mouse_x, mouse_y
     # empty base implementation

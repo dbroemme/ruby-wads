@@ -665,7 +665,7 @@ module Wads
                 return @cached_calc_x_values 
             end
             @cached_calc_x_values = divide_range_into_values(@x_range, @left_x, @right_x)
-            puts "The x_axis value to calculate are: #{@cached_calc_x_values}"
+            #puts "The x_axis value to calculate are: #{@cached_calc_x_values}"
             @cached_calc_x_values
         end
 
@@ -702,7 +702,6 @@ module Wads
                 values << grid_x
                 grid_x = grid_x + step_size
             end
-            puts "TOTAL X-AXIS POINTS: #{values.size}"
             values
         end
     end

@@ -294,6 +294,35 @@ module Wads
             edge
         end
 
+        def remove_output(name)
+            output_to_delete = nil
+            @outputs.each do |output|
+                if output.is_a? Edge 
+                    output_node = output.destination 
+                    if output_node.id == name 
+                        output_to_delete = output
+                    end 
+                elsif output.id == name
+                    output_to_delete = output
+                end 
+            end 
+            if output_to_delete
+                @outputs.delete(output_to_delete)
+            end
+        end 
+
+        def remove_backlink(name)
+            backlink_to_delete = nil
+            @backlinks.each do |backlink|
+                if backlink.id == name
+                    backlink_to_delete = backlink
+                end 
+            end 
+            if backlink_to_delete
+                @backlinks.delete(backlink_to_delete)
+            end
+        end 
+
         def add_tag(key, value)
             @tags[key] = value 
         end
@@ -382,6 +411,28 @@ module Wads
 
         def connect(source, destination, tags = {})
             add_edge(source, destination)
+        end
+
+        def delete(node) 
+            if node.is_a? String 
+                node = find_node(node)
+            end 
+            node.backlinks.each do |backlink| 
+                backlink.remove_output(node.name)
+            end
+            @node_list.delete(node)
+            @node_map.delete(node.name)
+        end 
+
+        def disconnect(source, target)
+            if source.is_a? String 
+                source = find_node(source)
+            end 
+            if target.is_a? String 
+                target = find_node(target)
+            end 
+            source.remove_output(target.name)
+            target.remove_backlink(source.name)
         end
 
         def add_node(node) 

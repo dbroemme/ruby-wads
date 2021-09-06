@@ -27,6 +27,7 @@ module Wads
     COLOR_BLACK = Gosu::Color::BLACK
     COLOR_FORM_BUTTON = Gosu::Color.argb(0xcc2e4053)
     COLOR_ERROR_CODE_RED = Gosu::Color.argb(0xffe6b0aa)
+    COLOR_DELETE_RED = Gosu::Color.argb(0xffb83e26)
 
     Z_ORDER_BACKGROUND = 2
     Z_ORDER_BORDER = 3
@@ -40,6 +41,7 @@ module Wads
     EVENT_TEXT_INPUT = "textinput"
     EVENT_TABLE_SELECT = "tableselect"
     EVENT_TABLE_UNSELECT = "tableunselect"
+    EVENT_TABLE_ROW_DELETE = "tablerowdelete"
 
     class Widget 
         attr_accessor :x
@@ -284,6 +286,14 @@ module Wads
             new_button
         end
 
+        def add_delete_button(rel_x, rel_y, &block)
+            new_delete_button = DeleteButton.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y))
+            new_delete_button.set_action(&block)
+            new_delete_button.base_z = @base_z
+            add_child(new_delete_button)
+            new_delete_button 
+        end
+
         def add_table(rel_x, rel_y, width, height, column_headers, color = COLOR_WHITE, max_visible_rows = 10)
             new_table = Table.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                               width, height, column_headers, @font, color, max_visible_rows)
@@ -500,6 +510,20 @@ module Wads
                 set_background(nil)
             end
         end
+    end 
+
+    class DeleteButton < Button
+        def initialize(x, y) 
+            super("ignore", x, y, Gosu::Font.new(22), 50, COLOR_DELETE_RED)
+            set_dimensions(20, 20)
+            add_child(Line.new(@x, @y, right_edge, bottom_edge, COLOR_DELETE_RED))
+            add_child(Line.new(@x, bottom_edge, right_edge, @y, COLOR_DELETE_RED))
+            set_border(@color)
+        end
+
+        def render 
+            # do nothing, just override the parent so we don't draw a label
+        end 
     end 
 
     class Document < Widget
@@ -723,6 +747,7 @@ module Wads
         attr_accessor :headers
         attr_accessor :max_visible_rows
         attr_accessor :current_row
+        attr_accessor :can_delete_rows
 
         def initialize(x, y, width, height, headers, font, color = COLOR_GRAY, max_visible_rows = 10) 
             super(x, y, color) 
@@ -731,7 +756,8 @@ module Wads
             @headers = headers
             @current_row = 0
             @max_visible_rows = max_visible_rows
-            clear_rows            
+            clear_rows
+            @can_delete_rows = false   
         end
 
         def scroll_up 
@@ -754,6 +780,11 @@ module Wads
         def add_row(data_row, color = @color)
             @data_rows << data_row
             @row_colors << color
+            if @can_delete_rows
+                add_delete_button(@width - 25, (@data_rows.size * 30) + 4) do
+                    puts "Hit the table delete button"
+                end
+            end
         end
 
         def number_of_rows 
@@ -901,8 +932,14 @@ module Wads
             y = @y + 30
             row_count = @current_row
             while row_count < @data_rows.size
-                if @selected_rows.include? row_count
-                    Gosu::draw_rect(@x + 20, y, @width - 30, 28, @selection_color, relative_z_order(Z_ORDER_SELECTION_BACKGROUND)) 
+                if @selected_rows.include? row_count 
+                    width_of_selection_background = @width - 30
+                    if @can_delete_rows 
+                        width_of_selection_background = width_of_selection_background - 20
+                    end
+                    Gosu::draw_rect(@x + 20, y, width_of_selection_background, 28,
+                                    @selection_color,
+                                    relative_z_order(Z_ORDER_SELECTION_BACKGROUND)) 
                 end 
                 y = y + 30
                 row_count = row_count + 1
@@ -916,12 +953,32 @@ module Wads
         def handle_mouse_down mouse_x, mouse_y
             if contains_click(mouse_x, mouse_y)
                 row_number = determine_row_number(mouse_y)
-                if is_row_selected(mouse_y)
-                    unset_selected_row(mouse_y, 0)
-                    return WidgetResult.new(false, EVENT_TABLE_UNSELECT, @data_rows[row_number])
+                # First check if its the delete button that got this
+                delete_this_row = false
+                @children.each do |child|
+                    if child.is_a? DeleteButton 
+                        if child.contains_click(mouse_x, mouse_y)
+                            delete_this_row = true 
+                        end 
+                    end 
+                end 
+                if delete_this_row
+                    # TODO remove from the widget display and then
+                    # send the event so the plotter can take its action
+                    if not row_number.nil?
+                       data_set_row_to_delete = @current_row + row_number
+                       data_set_name_to_delete = @data_rows[data_set_row_to_delete][1]
+                       @data_rows.delete_at(data_set_row_to_delete)
+                       return WidgetResult.new(false, EVENT_TABLE_ROW_DELETE, [data_set_name_to_delete])                       
+                    end
                 else
-                    set_selected_row(mouse_y, 0)
-                    return WidgetResult.new(false, EVENT_TABLE_SELECT, @data_rows[row_number])
+                    if is_row_selected(mouse_y)
+                        unset_selected_row(mouse_y, 0)
+                        return WidgetResult.new(false, EVENT_TABLE_UNSELECT, @data_rows[row_number])
+                    else
+                        set_selected_row(mouse_y, 0)
+                        return WidgetResult.new(false, EVENT_TABLE_SELECT, @data_rows[row_number])
+                    end
                 end
             end
         end
@@ -1020,6 +1077,11 @@ module Wads
             end
         end 
 
+        def remove_data_set(data_set_name)
+            @points_by_data_set_name.delete(data_set_name)
+            @visibility_map.delete(data_set_name)
+        end
+
         def x_val_to_pixel(val)
             x_pct = (@visible_range.right_x - val).to_f / @visible_range.x_range 
             @width - (@width.to_f * x_pct).round
@@ -1060,8 +1122,10 @@ module Wads
         def display_lines_for_point_set(points) 
             if points.length > 1
                 points.inject(points[0]) do |last, the_next|
-                    Gosu::draw_line last.x, last.y, last.color,
-                                    the_next.x, the_next.y, last.color, relative_z_order(Z_ORDER_GRAPHIC_ELEMENTS)
+                    if last.x < the_next.x
+                        Gosu::draw_line last.x, last.y, last.color,
+                                        the_next.x, the_next.y, last.color, relative_z_order(Z_ORDER_GRAPHIC_ELEMENTS)
+                    end
                     the_next
                 end
             end

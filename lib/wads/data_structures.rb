@@ -32,20 +32,28 @@ module Wads
         end
 
         def set(data_set_name, x, y)
-            data_set = @data[x]
+            data_set = @data[data_set_name]
             if data_set.nil? 
                 data_set = {}
-                @data[x] = data_set
+                @data[data_set_name] = data_set
             end
             data_set[x] = y
         end
 
         def get(data_set_name, x)
-            data_set = @data[x]
+            data_set = @data[data_set_name]
             if data_set.nil? 
                 return nil
             end
             data_set[x]
+        end
+
+        def keys(data_set_name)
+            data_set = @data[data_set_name]
+            if data_set.nil? 
+                return nil
+            end
+            data_set.keys
         end
     end 
 

@@ -110,6 +110,10 @@ class TextField < Gosu::TextInput
     # empty base implementation
   end 
 
+  def update(update_count, mouse_x, mouse_y)
+    # empty base implementation
+  end
+
   def handle_mouse_down mouse_x, mouse_y
     # empty base implementation
   end

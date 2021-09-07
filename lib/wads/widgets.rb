@@ -27,7 +27,6 @@ module Wads
     COLOR_BLACK = Gosu::Color::BLACK
     COLOR_FORM_BUTTON = Gosu::Color.argb(0xcc2e4053)
     COLOR_ERROR_CODE_RED = Gosu::Color.argb(0xffe6b0aa)
-    COLOR_DELETE_RED = Gosu::Color.argb(0xffb83e26)
 
     Z_ORDER_BACKGROUND = 2
     Z_ORDER_BORDER = 3
@@ -180,7 +179,7 @@ module Wads
             end
             handle_update(update_count, mouse_x, mouse_y) 
             @children.each do |child| 
-                child.handle_update(update_count, mouse_x, mouse_y) 
+                child.update(update_count, mouse_x, mouse_y) 
             end 
         end
 
@@ -520,10 +519,10 @@ module Wads
 
     class DeleteButton < Button
         def initialize(x, y) 
-            super("ignore", x, y, Gosu::Font.new(22), 50, COLOR_DELETE_RED)
-            set_dimensions(20, 20)
-            add_child(Line.new(@x, @y, right_edge, bottom_edge, COLOR_DELETE_RED))
-            add_child(Line.new(@x, bottom_edge, right_edge, @y, COLOR_DELETE_RED))
+            super("ignore", x, y, Gosu::Font.new(22), 50, COLOR_GRAY)
+            set_dimensions(14, 14)
+            add_child(Line.new(@x, @y, right_edge, bottom_edge, COLOR_ERROR_CODE_RED))
+            add_child(Line.new(@x, bottom_edge, right_edge, @y, COLOR_ERROR_CODE_RED))
             set_border(@color)
         end
 
@@ -766,7 +765,7 @@ module Wads
             clear_rows
             @can_delete_rows = false
             @delete_buttons = []
-            @next_delete_button_y = 34
+            @next_delete_button_y = 38
         end
 
         def scroll_up 
@@ -793,7 +792,7 @@ module Wads
 
         def add_table_delete_button 
             if @delete_buttons.size < @max_visible_rows
-                new_button = add_delete_button(@width - 25, @next_delete_button_y) do
+                new_button = add_delete_button(@width - 18, @next_delete_button_y) do
                     # nothing to do here, handled in parent widget by event
                 end
                 @delete_buttons << new_button
@@ -836,7 +835,6 @@ module Wads
 
         def render
             draw_border
-            draw_delete_buttons 
             return unless number_of_rows > 0
 
             column_widths = []
@@ -883,14 +881,6 @@ module Wads
                 count = count + 1
             end
         end
-
-        def draw_delete_buttons 
-            if @can_delete_rows
-                @delete_buttons.each do |db| 
-                    db.render 
-                end
-            end
-        end 
 
         def determine_row_number(mouse_y)
             relative_y = mouse_y - @y

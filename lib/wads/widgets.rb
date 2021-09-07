@@ -1075,13 +1075,13 @@ module Wads
         end
 
         def zoom_out 
-            @zoom_level = @zoom_level + 0.1
+            @zoom_level = @zoom_level + 0.15
             visible_range.scale(@zoom_level)
         end 
 
         def zoom_in
             if @zoom_level > 0.11
-                @zoom_level = @zoom_level - 0.1
+                @zoom_level = @zoom_level - 0.15
             end
             visible_range.scale(@zoom_level)
         end 
@@ -1118,7 +1118,9 @@ module Wads
         def add_data_set(data_set_name, rendered_points)
             if range_set?
                 @points_by_data_set_name[data_set_name] = rendered_points
-                @visibility_map[data_set_name] = true
+                if @visibility_map[data_set_name].nil?
+                    @visibility_map[data_set_name] = true
+                end
             else
                 puts "ERROR: range not set, cannot add data"
             end

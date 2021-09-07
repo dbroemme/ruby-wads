@@ -621,14 +621,14 @@ module Wads
         end 
 
         def scroll_up 
-            @bottom_y = @bottom_y + x_ten_percent
-            @top_y = @top_y + x_ten_percent
+            @bottom_y = @bottom_y + y_ten_percent
+            @top_y = @top_y + y_ten_percent
             @y_range = @top_y - @bottom_y
         end
 
         def scroll_down
-            @bottom_y = @bottom_y - x_ten_percent
-            @top_y = @top_y - x_ten_percent
+            @bottom_y = @bottom_y - y_ten_percent
+            @top_y = @top_y - y_ten_percent
             @y_range = @top_y - @bottom_y
         end
 

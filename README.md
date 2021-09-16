@@ -63,7 +63,8 @@ g.connect("b", "e")
 g.connect("e", "f")
 ```
 
-Currently, the Graph object is used by the Graph Widget for display. For the code above, this appears by default as follow:
+Currently, the Graph object is used by the Graph Widget for display. For the code above, this appears by default as follows:
+
 ![alt Screenshot](https://github.com/dbroemme/ruby-wads/blob/main/media/SampleGraph.png?raw=true)
 
 ## References

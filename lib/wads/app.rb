@@ -49,7 +49,7 @@ class WadsSampleApp < Gosu::Window
             process_lottery_data
 
         elsif opts[:graph] 
-            graph = create_test_graph
+            graph = create_test_graph #_using_nodes
             if not opts[:text]
                 @display_widget = SampleGraphDisplay.new(@small_font, graph)
                 show
@@ -203,6 +203,15 @@ class WadsSampleApp < Gosu::Window
         g.connect("b", "e")
         g.connect("e", "f")
         g
+    end
+
+    def create_test_graph_using_nodes
+        root = Node.new("a")
+        b = root.add("b")
+        b.add("d")
+        b.add("e").add("f")
+        root.add("c")
+        Graph.new(root)
     end
 end
 

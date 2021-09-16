@@ -271,6 +271,14 @@ module Wads
             @visited = false
             @tags = tags
         end 
+
+        def add(name, value = nil, tags = {})
+            add_output_node(Node.new(name, value, tags))
+        end
+
+        def children 
+            @outputs 
+        end
         
         def add_child(name, value)
             add_output(name, value)
@@ -400,9 +408,14 @@ module Wads
         attr_accessor :node_list
         attr_accessor :node_map
 
-        def initialize 
+        def initialize(root_node = nil)
             @node_list = []
             @node_map = {}
+            if root_node 
+                root_node.visit do |n|
+                    add_node(n)
+                end
+            end
         end
 
         def add(name, value = nil, tags = {}) 

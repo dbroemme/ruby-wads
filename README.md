@@ -38,6 +38,33 @@ There is also a sample Graph display using the following command.
 ```
 ./run-sample-app -g
 ```
+Note that you can construct graphs in one of two ways. The first approach uses Nodes directly.
+```
+root = Node.new("a")
+        b = root.add("b")
+        b.add("d")
+        b.add("e").add("f")
+        root.add("c")
+        Graph.new(root)
+```
+The second approach uses an overarching Graph object. 
+```
+g = Graph.new 
+g.add("a")
+g.add("b")
+g.add("c")
+g.add("d")
+g.add("e")
+g.add("f")
+g.connect("a", "b")
+g.connect("a", "c")
+g.connect("b", "d")
+g.connect("b", "e")
+g.connect("e", "f")
+```
+
+Currently, the Graph object is used by the Graph Widget for display. For the code above, this appears by default as follow:
+![alt Screenshot](https://github.com/dbroemme/ruby-wads/blob/main/media/SampleGraph.png?raw=true)
 
 ## References
 

@@ -946,6 +946,9 @@ module Wads
 
         def is_row_selected(mouse_y)
             row_number = determine_row_number(mouse_y)
+            if row_number.nil?
+                return false
+            end
             @selected_rows.include?(@current_row + row_number)
         end 
 
@@ -995,6 +998,9 @@ module Wads
         def handle_mouse_down mouse_x, mouse_y
             if contains_click(mouse_x, mouse_y)
                 row_number = determine_row_number(mouse_y)
+                if row_number.nil? 
+                    return WidgetResult.new(false)
+                end
                 # First check if its the delete button that got this
                 delete_this_row = false
                 @delete_buttons.each do |db|
@@ -1423,6 +1429,7 @@ module Wads
                 @rendered_nodes.values.each do |vn|
                     vn.draw 
                 end 
+
                 # Draw the connections between nodes 
                 @visible_data_nodes.values.each do |data_node|
                     data_node.outputs.each do |connected_data_node|

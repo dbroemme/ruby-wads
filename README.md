@@ -41,11 +41,11 @@ There is also a sample Graph display using the following command.
 Note that you can construct graphs in one of two ways. The first approach uses Nodes directly.
 ```
 root = Node.new("a")
-        b = root.add("b")
-        b.add("d")
-        b.add("e").add("f")
-        root.add("c")
-        Graph.new(root)
+b = root.add("b")
+b.add("d")
+b.add("e").add("f")
+root.add("c")
+Graph.new(root)
 ```
 The second approach uses an overarching Graph object. 
 ```

@@ -1,0 +1,11 @@
+N,A,color=COLOR_YELLOW
+N,B,color=COLOR_GREEN
+N,C,color=COLOR_BLUE
+N,D,color=COLOR_RED
+N,E,color=COLOR_PURPLE
+N,F,color=COLOR_GRAY
+C,A,B
+C,A,C
+C,B,D
+C,B,E
+C,E,F

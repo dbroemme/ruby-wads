@@ -4,6 +4,7 @@ module Wads
 
     SPACER = "  "
     VALUE_WIDTH = 10
+    COLOR_TAG = "color"
 
     DEG_0 = 0
     DEG_45 = Math::PI * 0.25
@@ -279,6 +280,10 @@ module Wads
         def children 
             @outputs 
         end
+
+        def number_of_links 
+            @outputs.size + @backlinks.size
+        end
         
         def add_child(name, value)
             add_output(name, value)
@@ -412,8 +417,12 @@ module Wads
             @node_list = []
             @node_map = {}
             if root_node 
-                root_node.visit do |n|
-                    add_node(n)
+                if root_node.is_a? Node
+                    root_node.visit do |n|
+                        add_node(n)
+                    end
+                elsif root_node.is_a? String 
+                    read_graph_from_file(root_node)
                 end
             end
         end
@@ -461,6 +470,24 @@ module Wads
                 target = find_node(target)
             end 
             source.add_output_edge(target, tags)
+        end
+
+        def get_number_of_connections_range 
+            # Find the min and max
+            min = 1000
+            max = 0
+            @node_list.each do |node|
+                num_links = node.number_of_links
+                if num_links < min 
+                    min = num_links 
+                end 
+                if num_links > max 
+                    max = num_links 
+                end
+            end 
+            
+            # Then create the scale
+            DataRange.new(min - 0.1, max + 0.1)
         end
 
         def find_node(name) 
@@ -539,6 +566,69 @@ module Wads
             end 
             map
         end
+
+        def process_tag_string(tags, tag_string) 
+            parts = tag_string.partition("=")
+            tag_name = parts[0]
+            tag_value = parts[2]
+            if tag_name == COLOR_TAG
+                begin
+                    value = eval(tag_value)
+                    puts "Adding tag #{tag_name} = #{value}"
+                    tags[tag_name] = value 
+                rescue => e
+                    puts "Ignoring tag #{tag_name} = #{tag_value}"
+                end
+            else
+                puts "Adding tag #{tag_name} = #{tag_value}"
+                tags[tag_name] = tag_value 
+            end
+        end 
+
+        def read_graph_from_file(filename)
+            puts "Read graph data from file #{filename}"
+            File.readlines(filename).each do |line|
+                # The format is a csv file as follows:
+                # N,name,value            --> nodes
+                # C,source,destination    --> connections, edges, links
+                #
+                # Optionally, each line type can be followed by comma-separated tag=value
+                line = line.chomp  # remove the carriage return
+                values = line.split(",")
+                type = values[0]
+                tags = {}
+                if type == "N" or type == "n"
+                    name = values[1]
+                    if values.size > 2
+                        value = values[2]
+                        # The second position can be a tag or the node value
+                        if value.include? "="
+                            process_tag_string(tags, value)
+                            value = nil 
+                        end 
+                    else 
+                        value = nil 
+                    end
+                    if values.size > 3
+                        values[3..-1].each do |tag_string|
+                            process_tag_string(tags, tag_string) 
+                        end
+                    end
+                    add(name, value, tags)
+                elsif type == "E" or type == "e" or type == "L" or type == "l" or type == "C" or type == "c"
+                    source_name = values[1]
+                    destination_name = values[2]
+                    if values.size > 3
+                        values[3..-1].each do |tag_string|
+                            process_tag_string(tags, tag_string) 
+                        end
+                    end
+                    connect(source_name, destination_name, tags)
+                else 
+                    puts "Ignoring line: #{line}"
+                end
+            end
+        end
     end
 
     class GraphReverseIterator
@@ -564,6 +654,34 @@ module Wads
             list << node
             list
         end    
+    end 
+
+    class DataRange 
+        attr_accessor :min
+        attr_accessor :max
+        attr_accessor :range
+
+        def initialize(min, max)
+            if min < max
+                @min = min 
+                @max = max 
+            else 
+                @min = max 
+                @max = min
+            end
+            @range = @max - @min
+        end
+
+        def bin_max_values(number_of_bins)
+            bin_size = @range / number_of_bins.to_f 
+            bins = []
+            bin_start_value = @min
+            number_of_bins.times do 
+                bin_start_value = bin_start_value + bin_size 
+                bins << bin_start_value
+            end 
+            bins
+        end
     end 
 
     class VisibleRange

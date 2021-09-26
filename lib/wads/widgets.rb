@@ -326,7 +326,6 @@ module Wads
             end
             default_width = default_dim[0]
             default_height = default_dim[1]
-            puts "[#{element_type}] Default dimensions: #{default_width} x #{default_height}"
             specified_width = args[ARG_DESIRED_WIDTH]
             if specified_width.nil?
                 if default_width == "max"
@@ -334,7 +333,6 @@ module Wads
                         the_width = max_width
                     else 
                         the_width = (@start_x + @max_width) - @next_x
-                        #puts "the_width #{the_width} = (#{@start_x} + #{@max_width}) - #{@next_x}"
                     end
                 else
                     the_width = default_width 
@@ -366,8 +364,6 @@ module Wads
                 end
             end
 
-            puts "[#{element_type}] The dimensions:   #{the_width} x #{the_height}"
-
             # Not all elements require padding
             padding_exempt = [ELEMENT_IMAGE, ELEMENT_HORIZONTAL_PANEL,
                 ELEMENT_VERTICAL_PANEL, ELEMENT_TABLE, ELEMENT_GENERIC,
@@ -393,7 +389,6 @@ module Wads
                     height_to_use = the_height
                 end 
             end
-            puts "[#{element_type}] Actual dimensions:   #{width_to_use} x #{height_to_use}   x, y:  #{x_to_use}, #{y_to_use}"
             coords = Coordinates.new(x_to_use, y_to_use,
                                      width_to_use, height_to_use)
 
@@ -470,7 +465,6 @@ module Wads
 
         def add_plot(args = {})
             coordinates = get_coordinates(ELEMENT_PLOT, args)
-            puts "layout add plot got width #{coordinates.width} x #{coordinates.height}"
             new_plot = Plot.new(coordinates.x, coordinates.y,
                                 coordinates.width, coordinates.height) 
             new_plot.base_z = @parent_widget.base_z
@@ -598,7 +592,6 @@ module Wads
             container = @container_map[section]
             new_panel = Panel.new(container.start_x, container.start_y,
                                   container.max_width, container.max_height)
-            puts "add_east_west panel got coordinates #{container.start_x}, #{container.start_y}   #{container.max_width} x #{container.max_height}"
             new_panel.set_layout(LAYOUT_EAST_WEST, args)
             new_panel.base_z = @parent_widget.base_z
             new_panel.disable_border
@@ -630,7 +623,6 @@ module Wads
     class ContentFooterLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
             super
-            puts "Constructing ContentFooter with width #{width} - #{height}, and args #{args}"
             #   +-------------------------------------------------+
             #   +                                                 +
             #   +                  LAYOUT_CENTER                  +
@@ -645,21 +637,17 @@ module Wads
             if args[ARG_DESIRED_HEIGHT]
                 bottom_section_height = args[ARG_DESIRED_HEIGHT]
             end
-            puts "Using bottom section height: #{bottom_section_height}"
             bottom_section_y_start = y + height - bottom_section_height
             middle_section_height = height - bottom_section_height
             @container_map[LAYOUT_CENTER] = GuiContainer.new(x, y, width, middle_section_height, FILL_VERTICAL_STACK)
             @container_map[LAYOUT_SOUTH] = GuiContainer.new(x, bottom_section_y_start,
                                                             width, bottom_section_height)
-            puts "ContentFooter: Middle container #{x}, #{y}   #{width} - #{middle_section_height}"
-            puts "ContentFooter: South container  #{x}, #{bottom_section_y_start}   #{width} - #{bottom_section_height}"
         end
     end 
 
     class EastWestLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
             super
-            puts "EastWestLayout construct #{x}, #{y}  #{width} x #{height}, and args #{args}"
             #   +-------------------------------------------------+
             #   +                        |                        +
             #   +     LAYOUT_WEST        |     LAYOUT_EAST        +
@@ -677,8 +665,6 @@ module Wads
             @container_map[LAYOUT_EAST] = GuiContainer.new(x + west_section_width, y,
                                                            east_section_width, height,
                                                            FILL_FULL_SIZE)
-            puts "EastWest: West container #{x}, #{y}   #{west_section_width} x #{height}"
-            puts "EastWest: East container  #{x + west_section_width}, #{y}   #{east_section_width} x #{height}"
         end
     end 
 
@@ -1525,7 +1511,7 @@ module Wads
         end
 
         def add_error_message(msg) 
-            @error_message = ErrorMessage.new(msg, x + 10, bottom_edge - 120)
+            @error_message = ErrorMessage.new(x + 10, bottom_edge - 120, msg)
             @error_message.base_z = @base_z
         end 
 

@@ -13,6 +13,7 @@ end
 class ThemeTestDisplay < Widget
     def initialize
         super(0, 0, 800, 600)
+        set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
         disable_border
 
         # Example of using the layout for absolute positioning
@@ -41,5 +42,4 @@ class ThemeTestDisplay < Widget
     end 
 end
 
-WadsConfig.instance.set_default_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
 ThemeTestApp.new.show

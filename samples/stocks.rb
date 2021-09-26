@@ -67,6 +67,7 @@ class StocksDisplay < Widget
 
     def initialize(stats)
         super(0, 0, 800, 600)
+        set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
 
         image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => LAYOUT_TOP})
         image.add_text("Wads Sample App", 10, 20, nil, true)
@@ -122,5 +123,4 @@ class StocksDisplay < Widget
     end 
 end
 
-WadsConfig.instance.set_default_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
 SampleStocksApp.new.show

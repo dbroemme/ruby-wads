@@ -543,7 +543,7 @@ module Wads
             coordinates = get_coordinates(orientation, args)
             new_panel = Panel.new(coordinates.x, coordinates.y,
                                   coordinates.width, coordinates.height)
-            new_panel.set_layout(LAYOUT_VERTICAL_COLUMN, args)  # Darren
+            new_panel.set_layout(LAYOUT_VERTICAL_COLUMN, args)
             new_panel.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_panel)
             new_panel
@@ -809,7 +809,7 @@ module Wads
             @layout 
         end 
 
-        def set_layout(layout_type, args)
+        def set_layout(layout_type, args = {})
             @layout = WadsConfig.instance.create_layout_for_widget(self, layout_type, args)
         end
 

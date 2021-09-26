@@ -49,6 +49,7 @@ class GraphDisplay < Widget
 
     def initialize(graph)
         super(0, 0, 800, 600)
+        set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
         @graph = graph
 
         image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => LAYOUT_TOP})
@@ -69,5 +70,4 @@ class GraphDisplay < Widget
     end 
 end
 
-WadsConfig.instance.set_default_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
 SampleGraphApp.new.show

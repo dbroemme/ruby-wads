@@ -94,6 +94,9 @@ module Wads
     FILL_HORIZONTAL_STACK = "fill_horizontal"
     FILL_FULL_SIZE = "fill_vertical"
 
+    GRAPH_DISPLAY_ALL = "all"
+    GRAPH_DISPLAY_EXPLORER = "explorer"
+    GRAPH_DISPLAY_TREE = "tree"
 
     class Coordinates 
         attr_accessor :x
@@ -260,6 +263,9 @@ module Wads
         #
         def circle(color)
             create_circles 
+            if color.nil?
+                return nil 
+            end
             img = @wads_image_circles[color]
             if img.nil?
                 get_logger.error("ERROR: Did not find circle image with color #{color}")
@@ -499,11 +505,11 @@ module Wads
             new_doc
         end
 
-        def add_graph_display(graph, args = {})
+        def add_graph_display(graph, display_mode = GRAPH_DISPLAY_ALL, args = {})
             coordinates = get_coordinates(ELEMENT_GRAPH, args)
             new_graph = GraphWidget.new(coordinates.x, coordinates.y,
                                         coordinates.width, coordinates.height,
-                                        graph) 
+                                        graph, display_mode) 
             new_graph.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_graph)
             new_graph
@@ -2188,8 +2194,9 @@ module Wads
         attr_accessor :image
         attr_accessor :scale
         attr_accessor :label
+        attr_accessor :is_explorer
 
-        def initialize(x, y, node, color = nil) 
+        def initialize(x, y, node, color = nil, initial_scale = 1, is_explorer = false) 
             super(x, y) 
             @override_color = color
             @data_node = node
@@ -2200,25 +2207,42 @@ module Wads
             else 
                 @image = circle_image 
             end
-            set_scale(1)
+            @is_explorer = is_explorer
+            set_scale(initial_scale, @is_explorer)
             disable_border
         end
 
-        def set_scale(value)
+        def name 
+            @data_node.name 
+        end
+
+        def set_scale(value, is_explorer = false)
+            @is_explorer = is_explorer
+            if value < 0.5
+                value = 0.5
+            end 
             @scale = value / 10.to_f
             debug("In node widget Setting scale of #{@label} to #{value} = #{@scale}")
             @width = IMAGE_CIRCLE_SIZE * scale.to_f
             @height = IMAGE_CIRCLE_SIZE * scale.to_f
-            text_pixel_width = @gui_theme.font.text_width(@label)
-            clear_children  # the text widget is the only child, so we can remove all
-            add_text(@label, (@width / 2) - (text_pixel_width / 2), -20)
+            # Only in explorer mode do we dull out nodes on the outer edge
+            show_text = true
+            if value <= 1 and @is_explorer
+                show_text = false 
+            end 
+            if show_text
+                text_pixel_width = @gui_theme.font.text_width(@label)
+                clear_children  # the text widget is the only child, so we can remove all
+                add_text(@label, (@width / 2) - (text_pixel_width / 2), -20)
+            end
         end
 
         def get_text_widget
             if @children.size > 0
                 return @children[0]
             end 
-            raise "No text widget for NodeIconWidget" 
+            #raise "No text widget for NodeIconWidget" 
+            nil
         end
 
         def render 
@@ -2232,13 +2256,13 @@ module Wads
 
     class GraphWidget < Widget
         attr_accessor :graph
-        attr_accessor :center_node 
         attr_accessor :selected_node
         attr_accessor :selected_node_x_offset
         attr_accessor :selected_node_y_offset
         attr_accessor :size_by_connections
+        attr_accessor :is_explorer
 
-        def initialize(x, y, width, height, graph) 
+        def initialize(x, y, width, height, graph, display_mode = GRAPH_DISPLAY_ALL) 
             super(x, y)
             set_dimensions(width, height)
             if graph.is_a? Node 
@@ -2247,8 +2271,15 @@ module Wads
                 @graph = graph 
             end
             @use_icons = true
-            @size_by_connections = true
-            set_all_nodes_for_display
+            @size_by_connections = false
+            @is_explorer = false
+            if display_mode == GRAPH_DISPLAY_ALL
+                set_all_nodes_for_display
+            elsif display_mode == GRAPH_DISPLAY_TREE 
+                set_tree_display
+            else 
+                set_explorer_display 
+            end
         end 
 
         def handle_update update_count, mouse_x, mouse_y
@@ -2278,7 +2309,27 @@ module Wads
             end 
         end
 
-        def set_tree_display(max_depth = -1)
+        def set_explorer_display(center_node = nil)
+            if center_node.nil? 
+                # If not specified, pick a center node as the one with the most connections
+                center_node = @graph.node_with_most_connections
+            end
+            @size_by_connections = false
+            @is_explorer = true
+            @graph.reset_visited
+
+            # This will traverse the entire graph and set the depth, or distance,
+            # from the center node. We use that later in populate_rendered_nodes
+            # to control the size of the node
+            @visible_data_nodes = @graph.traverse_and_collect_nodes(center_node)
+
+            @rendered_nodes = {}
+            populate_rendered_nodes
+
+            prevent_text_overlap 
+        end 
+
+        def set_tree_display
             @graph.reset_visited
             @visible_data_nodes = @graph.node_map
             @rendered_nodes = {}
@@ -2318,7 +2369,7 @@ module Wads
                 index = 0
                 while index < bins.size 
                     if num_links <= bins[index]
-                        @rendered_nodes[node.name].set_scale(index + 1)
+                        @rendered_nodes[node.name].set_scale(index + 1, @is_explorer)
                         index = bins.size
                     end 
                     index = index + 1
@@ -2331,8 +2382,20 @@ module Wads
                 text = rn.get_text_widget
                 if text
                     if overlaps_with_a_node(text)
-                        debug("#{text.label} overlaps with #{rn.label}")
+                        debug("#{text.label} overlaps with other text")
                         move_text_for_node(rn)
+                    else 
+                        move_in_bounds = false
+                        # We also check to see if the text is outside the edges of this widget
+                        if text.x < @x or text.right_edge > right_edge 
+                            move_in_bounds = true 
+                        elsif text.y < @y or text.bottom_edge > bottom_edge 
+                            move_in_bounds = true
+                        end
+                        if move_in_bounds 
+                            debug("#{text.label} was out of bounds")
+                            move_text_for_node(rn)
+                        end
                     end
                 end
             end
@@ -2340,6 +2403,9 @@ module Wads
 
         def move_text_for_node(rendered_node)
             text = rendered_node.get_text_widget
+            if text.nil? 
+                return 
+            end
             radians_between_attempts = DEG_360 / 24
             current_radians = 0.05
             done = false 
@@ -2382,13 +2448,6 @@ module Wads
                         return true
                     end
                 end
-            end
-            # We also check to see if the text is outside the edges of this widget
-            if text.x < @x or text.right_edge > right_edge 
-                return true 
-            end
-            if text.y < @y or text.bottom_edge > bottom_edge 
-                return true 
             end
             false
         end
@@ -2480,6 +2539,31 @@ module Wads
             radians_between_nodes = DEG_360 / number_of_visible_nodes.to_f
             current_radians = 0.05
 
+            padding = 100
+            size_of_x_band = (@width - padding) / 6
+            size_of_y_band = (@height - padding) / 6
+            random_x = size_of_x_band / 8
+            random_y = size_of_y_band / 8
+            half_random_x = random_x / 2
+            half_random_y = random_y / 2
+            debug("Band sizes: #{size_of_x_band}, #{size_of_y_band}")
+
+            # TODO Darren precompute the band center points
+            #      then reference by the scale or depth values below
+            band_center_x = padding + (size_of_x_band / 2) 
+            band_center_y = padding + (size_of_y_band / 2) 
+            # depth 1 [0] - center node, distance should be zero. Should be only one
+            # depth 2 [1]  - band one
+            # depth 3 [2]  - band one
+            # depth 4 [3]  - band one
+            bands_x = [0, band_center_x]
+            bands_x << band_center_x + size_of_x_band
+            bands_x << band_center_x + size_of_x_band + size_of_x_band
+
+            bands_y = [0, band_center_y]
+            bands_y << band_center_y + size_of_y_band
+            bands_y << band_center_y + size_of_y_band + size_of_y_band
+
             @visible_data_nodes.each do |node_name, data_node|
                 process_this_node = true
                 if center_node 
@@ -2488,10 +2572,28 @@ module Wads
                     end 
                 end
                 if process_this_node 
+                    scale_to_use = 1
+                    if data_node.depth < 4
+                        scale_to_use = 5 - data_node.depth
+                    end
+                    if @is_explorer 
+                        # TODO Layer the nodes around the center
+                        # We need a better multiplier based on the height and width
+                        # max distance x would be (@width / 2) - padding
+                        # divide that into three regions, layer 2, 3, and 4
+                        # get the center point for each of these regions, and do a random from there
+                        # scale to use determines which of the regions
+                        band_index = 4 - scale_to_use
+                        distance_from_center_x = bands_x[band_index] + rand(random_x) - half_random_x
+                        distance_from_center_y = bands_y[band_index] + rand(random_y) - half_random_y
+                    else 
+                        distance_from_center_x = 80 + rand(200)
+                        distance_from_center_y = 40 + rand(100)
+                    end
                     # Use radians to spread the other nodes around the center node
                     # For now, we will randomly place them
-                    node_x = center_x + ((80 + rand(200)) * Math.cos(current_radians))
-                    node_y = center_y - ((40 + rand(100)) * Math.sin(current_radians))
+                    node_x = center_x + (distance_from_center_x * Math.cos(current_radians))
+                    node_y = center_y - (distance_from_center_y * Math.sin(current_radians))
                     if node_x < @x 
                         node_x = @x + 1
                     elsif node_x > right_edge - 20
@@ -2511,7 +2613,9 @@ module Wads
                                                         node_x,
                                                         node_y,
                                                         data_node,
-                                                        get_node_color(data_node)) 
+                                                        get_node_color(data_node),
+                                                        scale_to_use,
+                                                        @is_explorer) 
                     else
                         @rendered_nodes[data_node.name] = NodeWidget.new(
                                                         node_x,

@@ -9,7 +9,7 @@ class SampleStarWarsApp < WadsApp
     STAR_WARS_DATA_FILE = "./data/starwars-episode-4-interactions.json"
 
     def initialize
-        super(800, 600, "Wads Sample Star Wars App")
+        super(800, 800, "Wads Sample Star Wars App")
         set_display(StarWarsDisplay.new(process_star_wars_data))
     end 
 
@@ -53,7 +53,7 @@ class StarWarsDisplay < Widget
     attr_accessor :graph
 
     def initialize(graph)
-        super(0, 0, 800, 600)
+        super(0, 0, 800, 800)
         set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
         @graph = graph
 
@@ -76,7 +76,8 @@ class StarWarsDisplay < Widget
         @graph.node_list.each do |character|
             @data_table.add_row([character.name, character.value], character.get_tag(ARG_COLOR))
         end
-        @graph_display = get_layout.add_graph_display(@graph, { ARG_SECTION => LAYOUT_CENTER})
+        @graph_display = get_layout.add_graph_display(@graph, GRAPH_DISPLAY_EXPLORER,
+                                                      { ARG_SECTION => LAYOUT_CENTER})
 
         disable_border
     end
@@ -102,7 +103,8 @@ class StarWarsDisplay < Widget
             val = @data_table.set_selected_row(mouse_y, 0)
             if not val.nil?
                 node = @graph.find_node(val)
-                @graph_display.set_center_node(node, 2)
+                #@graph_display.set_center_node(node, 2)
+                @graph_display.set_explorer_display(node)
             end  
         end
     end

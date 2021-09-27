@@ -63,8 +63,8 @@ class GraphDisplay < Widget
         panel.center_children
         panel.disable_border
 
-        @graph_display = get_layout.add_graph_display(@graph, { ARG_SECTION => LAYOUT_CENTER})
-        @graph_display.set_tree_display
+        @graph_display = get_layout.add_graph_display(@graph, GRAPH_DISPLAY_TREE,
+                                                      { ARG_SECTION => LAYOUT_CENTER})
         disable_border
     end 
 end

@@ -258,6 +258,7 @@ module Wads
         attr_accessor :outputs
         attr_accessor :visited
         attr_accessor :tags
+        attr_accessor :depth
 
         def id 
             # id is an alias for name
@@ -271,6 +272,7 @@ module Wads
             @outputs = []
             @visited = false
             @tags = tags
+            @depth = 1
         end 
 
         def add(name, value = nil, tags = {})
@@ -377,17 +379,7 @@ module Wads
         end
 
         def to_display 
-            "#{@name}: #{value}   inputs: #{@backlinks.size}  outputs: #{@outputs.size}"
-        end 
-
-        def full_display 
-            puts to_display
-            @backlinks.each do |i|
-                puts "Input:  #{i.name}"
-            end
-            #@outputs.each do |o|
-            #    puts "Output: #{o.name}"
-            #end
+            "Node #{@name}: #{value}   inputs: #{@backlinks.size}  outputs: #{@outputs.size}"
         end 
     end
 
@@ -472,6 +464,19 @@ module Wads
             source.add_output_edge(target, tags)
         end
 
+        def node_with_most_connections 
+            max_node = nil
+            max = -1
+            @node_list.each do |node|
+                num_links = node.number_of_links
+                if num_links > max 
+                    max = num_links 
+                    max_node = node
+                end
+            end 
+            max_node
+        end 
+
         def get_number_of_connections_range 
             # Find the min and max
             min = 1000
@@ -501,6 +506,7 @@ module Wads
         def reset_visited 
             @node_list.each do |node|
                 node.visited = false 
+                node.depth = 0
             end 
         end
 
@@ -536,7 +542,7 @@ module Wads
             false
         end
 
-        def traverse_and_collect_nodes(node, max_depth, current_depth = 1)
+        def traverse_and_collect_nodes(node, max_depth = 0, current_depth = 1)
             if max_depth > 0
                 if current_depth > max_depth 
                     return {}
@@ -544,21 +550,25 @@ module Wads
             end
             map = {}
             if node.visited 
+                if current_depth < node.depth 
+                    node.depth = current_depth 
+                end
                 return {} 
             else
                 map[node.name] = node
+                node.depth = current_depth
                 node.visited = true
             end
-            node.backlinks.each do |child|
+            node.outputs.each do |child|
+                if child.is_a? Edge 
+                    child = child.destination 
+                end
                 map_from_child = traverse_and_collect_nodes(child, max_depth, current_depth + 1)
                 map_from_child.each do |key, value|
                     map[key] = value 
                 end
             end 
-            node.outputs.each do |child|
-                if child.is_a? Edge 
-                    child = child.destination 
-                end
+            node.backlinks.each do |child|
                 map_from_child = traverse_and_collect_nodes(child, max_depth, current_depth + 1)
                 map_from_child.each do |key, value|
                     map[key] = value 

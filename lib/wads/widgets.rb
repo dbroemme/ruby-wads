@@ -6,6 +6,7 @@ module Wads
     COLOR_PEACH = Gosu::Color.argb(0xffe6b0aa)
     COLOR_LIGHT_PURPLE = Gosu::Color.argb(0xffd7bde2)
     COLOR_LIGHT_BLUE = Gosu::Color.argb(0xffa9cce3)
+    COLOR_VERY_LIGHT_BLUE = Gosu::Color.argb(0xffd0def5)
     COLOR_LIGHT_GREEN = Gosu::Color.argb(0xffa3e4d7)
     COLOR_GREEN = COLOR_LIGHT_GREEN
     COLOR_LIGHT_YELLOW = Gosu::Color.argb(0xfff9e79f)
@@ -131,6 +132,19 @@ module Wads
         def pixel_width_for_string(str)
             @font.text_width(str)
         end
+    end
+
+    class WadsBrightTheme < GuiTheme 
+        def initialize 
+            super(COLOR_BLACK,                # text color
+                  COLOR_HEADER_BRIGHT_BLUE,   # graphic elements
+                  COLOR_BORDER_BLUE,          # border color
+                  COLOR_WHITE,                # background
+                  COLOR_VERY_LIGHT_BLUE,      # selected item
+                  true,                       # use icons
+                  Gosu::Font.new(22),         # regular font
+                  Gosu::Font.new(38))         # large font
+        end 
     end
 
     class WadsConfig 
@@ -1443,7 +1457,7 @@ module Wads
         def render 
             y = @y + 4
             @lines.each do |line|
-                @gui_theme.font.draw_text(line, @x + 5, y, z_order, 1, 1, COLOR_WHITE)
+                @gui_theme.font.draw_text(line, @x + 5, y, z_order, 1, 1, text_color)
                 y = y + 26
             end
         end 

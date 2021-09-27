@@ -91,7 +91,7 @@ class StocksDisplay < Widget
             max = format_percent(stats.max(day))
             p10 = format_percent(stats.percentile(day, 0.1))
             p90 = format_percent(stats.percentile(day, 0.90))
-            @data_table.add_row([day, min, avg, std, max, p10, p90], COLOR_HEADER_BRIGHT_BLUE)
+            @data_table.add_row([day, min, avg, std, max, p10, p90])
         end
 
         @selection_text = nil
@@ -123,4 +123,5 @@ class StocksDisplay < Widget
     end 
 end
 
+WadsConfig.instance.set_current_theme(WadsBrightTheme.new)
 SampleStocksApp.new.show

@@ -65,7 +65,6 @@ class GraphDisplay < Widget
 
         @graph_display = get_layout.add_graph_display(@graph, { ARG_SECTION => LAYOUT_CENTER})
         @graph_display.set_tree_display
-        disable_background 
         disable_border
     end 
 end

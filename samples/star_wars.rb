@@ -78,7 +78,6 @@ class StarWarsDisplay < Widget
         end
         @graph_display = get_layout.add_graph_display(@graph, { ARG_SECTION => LAYOUT_CENTER})
 
-        disable_background 
         disable_border
     end
 

@@ -9,7 +9,7 @@ class SampleGraphApp < WadsApp
 
     def initialize
         super(800, 600, "Wads Sample Graph App")
-        set_display(GraphDisplay.new(create_sample_graph_from_file))
+        set_display(GraphDisplay.new(create_sample_graph))
     end 
 
     #

@@ -69,4 +69,5 @@ class GraphDisplay < Widget
     end 
 end
 
+#WadsConfig.instance.set_current_theme(WadsNoIconTheme.new)
 SampleGraphApp.new.show

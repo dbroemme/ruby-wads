@@ -36,6 +36,7 @@ module Wads
     COLOR_FORM_BUTTON = Gosu::Color.argb(0xcc2e4053)
     COLOR_ERROR_CODE_RED = Gosu::Color.argb(0xffe6b0aa)
     COLOR_BORDER_BLUE = Gosu::Color.argb(0xff004D80)
+    COLOR_ALPHA = "alpha"
 
     Z_ORDER_BACKGROUND = 2
     Z_ORDER_BORDER = 3
@@ -296,6 +297,7 @@ module Wads
             @wads_image_circle_yellow = Gosu::Image.new("./media/CircleYellow.png")
             @wads_image_circle_gray = Gosu::Image.new("./media/CircleGray.png")
             @wads_image_circle_white = Gosu::Image.new("./media/CircleWhite.png")
+            @wads_image_circle_alpha = Gosu::Image.new("./media/CircleAlpha.png")
             @wads_image_circles = {}
             @wads_image_circles[COLOR_AQUA] = @wads_image_circle_aqua
             @wads_image_circles[COLOR_BLUE] = @wads_image_circle_blue
@@ -305,6 +307,7 @@ module Wads
             @wads_image_circles[COLOR_YELLOW] = @wads_image_circle_yellow
             @wads_image_circles[COLOR_GRAY] = @wads_image_circle_gray
             @wads_image_circles[COLOR_WHITE] = @wads_image_circle_white
+            @wads_image_circles[COLOR_ALPHA] = @wads_image_circle_alpha
             @wads_image_circles[4294956800] = @wads_image_circle_yellow
             @wads_image_circles[4281893349] = @wads_image_circle_blue
             @wads_image_circles[4294967295] = @wads_image_circle_gray
@@ -2186,6 +2189,10 @@ module Wads
             set_scale(initial_scale, @is_explorer)
         end
 
+        def is_background 
+            @scale <= 1 and @is_explorer
+        end
+
         def set_scale(value, is_explorer = false)
             @scale = value
             @is_explorer = is_explorer
@@ -2238,6 +2245,10 @@ module Wads
             @data_node.name 
         end
 
+        def is_background 
+            @scale <= 0.1 and @is_explorer
+        end
+
         def set_scale(value, is_explorer = false)
             @is_explorer = is_explorer
             if value < 0.5
@@ -2248,11 +2259,9 @@ module Wads
             @width = IMAGE_CIRCLE_SIZE * scale.to_f
             @height = IMAGE_CIRCLE_SIZE * scale.to_f
             # Only in explorer mode do we dull out nodes on the outer edge
-            show_text = true
-            if value <= 1 and @is_explorer
-                show_text = false 
-            end 
-            if show_text
+            if is_background 
+                @image = WadsConfig.instance.circle(COLOR_ALPHA)
+            else
                 text_pixel_width = @gui_theme.font.text_width(@label)
                 clear_children  # the text widget is the only child, so we can remove all
                 add_text(@label, (@width / 2) - (text_pixel_width / 2), -20)
@@ -2675,9 +2684,16 @@ module Wads
                         if connected_rendered_node.nil?
                             # Don't draw if it is not currently visible
                         else
-                            Gosu::draw_line rendered_node.center_x, rendered_node.center_y, rendered_node.graphics_color,
+                            if @is_explorer and (rendered_node.is_background or connected_rendered_node.is_background)
+                                # Use a dull gray color for the line
+                                Gosu::draw_line rendered_node.center_x, rendered_node.center_y, COLOR_LIGHT_GRAY,
+                                    connected_rendered_node.center_x, connected_rendered_node.center_y, COLOR_LIGHT_GRAY,
+                                    relative_z_order(Z_ORDER_GRAPHIC_ELEMENTS)
+                            else
+                                Gosu::draw_line rendered_node.center_x, rendered_node.center_y, rendered_node.graphics_color,
                                     connected_rendered_node.center_x, connected_rendered_node.center_y, connected_rendered_node.graphics_color,
                                     relative_z_order(Z_ORDER_GRAPHIC_ELEMENTS)
+                            end
                         end
                     end
                 end 

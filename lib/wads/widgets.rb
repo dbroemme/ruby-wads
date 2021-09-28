@@ -150,6 +150,19 @@ module Wads
         end 
     end
 
+    class WadsNoIconTheme < GuiTheme 
+        def initialize 
+            super(COLOR_WHITE,                # text color
+                  COLOR_HEADER_BRIGHT_BLUE,   # graphic elements
+                  COLOR_BORDER_BLUE,          # border color
+                  COLOR_BLACK,                # background
+                  COLOR_LIGHT_GRAY,           # selected item
+                  false,                      # use icons
+                  Gosu::Font.new(22),         # regular font
+                  Gosu::Font.new(38))         # large font
+        end 
+    end
+
     class WadsConfig 
         include Singleton
 
@@ -2164,14 +2177,23 @@ module Wads
     class NodeWidget < Button
         attr_accessor :data_node
 
-        def initialize(x, y, node, color = nil) 
-            super(node.name, x, y)
+        def initialize(x, y, node, color = nil, initial_scale = 1, is_explorer = false) 
+            super(x, y, node.name)
+            @orig_width = @width 
+            @orig_height = @height
             @data_node = node
             @override_color = color
+            set_scale(initial_scale, @is_explorer)
         end
 
-        def set_scale(value)
-            # TODO adjust the width and height
+        def set_scale(value, is_explorer = false)
+            @scale = value
+            @is_explorer = is_explorer
+            if value < 1
+                value = 1
+            end 
+            @width = @orig_width * @scale.to_f
+            debug("In regular node widget Setting scale of #{@label} to #{@scale}")
         end
 
         def get_text_widget
@@ -2270,9 +2292,13 @@ module Wads
             else
                 @graph = graph 
             end
-            @use_icons = true
             @size_by_connections = false
-            @is_explorer = false
+            @is_explorer = false 
+            if [GRAPH_DISPLAY_ALL, GRAPH_DISPLAY_TREE, GRAPH_DISPLAY_EXPLORER].include? display_mode 
+                debug("Displaying graph in #{display_mode} mode")
+            else 
+                raise "#{display_mode} is not a valid display mode for Graph Widget"
+            end
             if display_mode == GRAPH_DISPLAY_ALL
                 set_all_nodes_for_display
             elsif display_mode == GRAPH_DISPLAY_TREE 
@@ -2460,7 +2486,7 @@ module Wads
             end 
             current_node.visited = true
 
-            if @use_icons
+            if @gui_theme.use_icons
                 @rendered_nodes[current_node.name] = NodeIconWidget.new(
                     x_pixel_to_screen(start_x + ((end_x - start_x) / 2)),
                     y_pixel_to_screen(y_level),
@@ -2516,7 +2542,7 @@ module Wads
             # Convert the data nodes to rendered nodes
             # Start by putting the center node in the center, then draw others around it
             @rendered_nodes = {}
-            if @use_icons
+            if @gui_theme.use_icons
                 @rendered_nodes[center_node.name] = NodeIconWidget.new(
                     center_x, center_y, center_node, get_node_color(center_node)) 
             else
@@ -2608,7 +2634,7 @@ module Wads
 
                     # Note we can link between data nodes and rendered nodes using the node name
                     # We have a map of each
-                    if @use_icons
+                    if @gui_theme.use_icons
                         @rendered_nodes[data_node.name] = NodeIconWidget.new(
                                                         node_x,
                                                         node_y,
@@ -2622,7 +2648,8 @@ module Wads
                                                         node_y,
                                                         data_node,
                                                         get_node_color(data_node),
-                                                        get_node_color(data_node))
+                                                        scale_to_use,
+                                                        @is_explorer)
                     end
                 end
             end

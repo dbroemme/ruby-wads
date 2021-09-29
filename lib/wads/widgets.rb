@@ -2343,7 +2343,7 @@ module Wads
             if @selected_node 
                 if @is_explorer
                     time_between_mouse_up_down = Time.now - @click_timestamp
-                    if time_between_mouse_up_down < 0.4
+                    if time_between_mouse_up_down < 0.2
                         # Treat this as a single click and make the selected
                         # node the new center node of the graph
                         set_explorer_display(@selected_node.data_node)
@@ -2606,9 +2606,9 @@ module Wads
             band_center_x = padding + (size_of_x_band / 2) 
             band_center_y = padding + (size_of_y_band / 2) 
             # depth 1 [0] - center node, distance should be zero. Should be only one
-            # depth 2 [1]  - band one
-            # depth 3 [2]  - band one
-            # depth 4 [3]  - band one
+            # depth 2 [1] - band one
+            # depth 3 [2] - band two
+            # depth 4 [3] - band three
             bands_x = [0, band_center_x]
             bands_x << band_center_x + size_of_x_band
             bands_x << band_center_x + size_of_x_band + size_of_x_band
@@ -2626,7 +2626,10 @@ module Wads
                 end
                 if process_this_node 
                     scale_to_use = 1
-                    if data_node.depth < 4
+                    if stats.count(1) > 0 and stats.count(2) == 0
+                        # if all nodes are depth 1, then size everything
+                        # as a small node
+                    elsif data_node.depth < 4
                         scale_to_use = 5 - data_node.depth
                     end
                     if @is_explorer 

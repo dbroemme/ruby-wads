@@ -2349,14 +2349,15 @@ module Wads
                 # If not specified, pick a center node as the one with the most connections
                 center_node = @graph.node_with_most_connections
             end
+
+            @graph.reset_visited
+            @visible_data_nodes = {}
+            center_node.bfs(4) do |n|
+                @visible_data_nodes[n.name] = n
+            end
+
             @size_by_connections = false
             @is_explorer = true
-            @graph.reset_visited
-
-            # This will traverse the entire graph and set the depth, or distance,
-            # from the center node. We use that later in populate_rendered_nodes
-            # to control the size of the node
-            @visible_data_nodes = @graph.traverse_and_collect_nodes(center_node)
 
             @rendered_nodes = {}
             populate_rendered_nodes

@@ -378,6 +378,39 @@ module Wads
             end
         end
 
+        def bfs(max_depth, &block)
+            node_queue = [self]
+            @depth = 1
+            until node_queue.empty?
+                node = node_queue.shift
+                yield node
+                node.visited = true
+                if node.depth < max_depth
+                    # Get the set of all outputs and backlinks
+                    h = {}
+                    node.outputs.each do |n|
+                        if n.is_a? Edge 
+                            n = n.destination 
+                        end 
+                        h[n.name] = n 
+                    end 
+                    node.backlinks.each do |n|
+                        h[n.name] = n 
+                    end 
+        
+                    h.values.each do |n|
+                        if n.visited 
+                            # ignore, don't process again
+                        else
+                            n.visited = true
+                            n.depth = node.depth + 1
+                            node_queue << n
+                        end
+                    end
+                end
+            end
+        end
+
         def to_display 
             "Node #{@name}: #{value}   inputs: #{@backlinks.size}  outputs: #{@outputs.size}"
         end 

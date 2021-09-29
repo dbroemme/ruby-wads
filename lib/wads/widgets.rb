@@ -2332,6 +2332,7 @@ module Wads
                         @selected_node = rn 
                         @selected_node_x_offset = mouse_x - rn.x 
                         @selected_node_y_offset = mouse_y - rn.y
+                        @click_timestamp = Time.now
                     end
                 end
             end
@@ -2340,6 +2341,14 @@ module Wads
 
         def handle_mouse_up mouse_x, mouse_y
             if @selected_node 
+                if @is_explorer
+                    time_between_mouse_up_down = Time.now - @click_timestamp
+                    if time_between_mouse_up_down < 0.4
+                        # Treat this as a single click and make the selected
+                        # node the new center node of the graph
+                        set_explorer_display(@selected_node.data_node)
+                    end 
+                end
                 @selected_node = nil 
             end 
         end
@@ -2635,7 +2644,6 @@ module Wads
                         distance_from_center_y = 40 + rand(100)
                     end
                     # Use radians to spread the other nodes around the center node
-                    # For now, we will randomly place them
                     radians_to_use = current_radians[data_node.depth]
                     radians_to_use = radians_to_use + (rand(radians_increment[data_node.depth]) / 2)
                     current_radians[data_node.depth] = current_radians[data_node.depth] + radians_increment[data_node.depth]

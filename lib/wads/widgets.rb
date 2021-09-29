@@ -2570,10 +2570,18 @@ module Wads
 
         def populate_rendered_nodes(center_node = nil)
             # Spread out the other nodes around the center node
-            # going in a circle
-            number_of_visible_nodes = @visible_data_nodes.size 
-            radians_between_nodes = DEG_360 / number_of_visible_nodes.to_f
-            current_radians = 0.05
+            # going in a circle at each depth level
+            stats = Stats.new("NodesPerDepth")
+            @visible_data_nodes.values.each do |n|
+                stats.increment(n.depth)
+            end
+            current_radians = []
+            radians_increment = []
+            (1..4).each do |n|
+                number_of_nodes_at_depth = stats.count(n)
+                radians_increment[n] = DEG_360 / number_of_nodes_at_depth.to_f
+                current_radians[n] = 0.05
+            end
 
             padding = 100
             size_of_x_band = (@width - padding) / 6
@@ -2584,8 +2592,8 @@ module Wads
             half_random_y = random_y / 2
             debug("Band sizes: #{size_of_x_band}, #{size_of_y_band}")
 
-            # TODO Darren precompute the band center points
-            #      then reference by the scale or depth values below
+            # Precompute the band center points
+            # then reference by the scale or depth values below
             band_center_x = padding + (size_of_x_band / 2) 
             band_center_y = padding + (size_of_y_band / 2) 
             # depth 1 [0] - center node, distance should be zero. Should be only one
@@ -2628,8 +2636,11 @@ module Wads
                     end
                     # Use radians to spread the other nodes around the center node
                     # For now, we will randomly place them
-                    node_x = center_x + (distance_from_center_x * Math.cos(current_radians))
-                    node_y = center_y - (distance_from_center_y * Math.sin(current_radians))
+                    radians_to_use = current_radians[data_node.depth]
+                    radians_to_use = radians_to_use + (rand(radians_increment[data_node.depth]) / 2)
+                    current_radians[data_node.depth] = current_radians[data_node.depth] + radians_increment[data_node.depth]
+                    node_x = center_x + (distance_from_center_x * Math.cos(radians_to_use))
+                    node_y = center_y - (distance_from_center_y * Math.sin(radians_to_use))
                     if node_x < @x 
                         node_x = @x + 1
                     elsif node_x > right_edge - 20
@@ -2640,7 +2651,6 @@ module Wads
                     elsif node_y > bottom_edge - 26 
                         node_y = bottom_edge - 26
                     end
-                    current_radians = current_radians + radians_between_nodes
 
                     # Note we can link between data nodes and rendered nodes using the node name
                     # We have a map of each

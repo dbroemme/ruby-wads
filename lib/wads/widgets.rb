@@ -2255,7 +2255,7 @@ module Wads
                 value = 0.5
             end 
             @scale = value / 10.to_f
-            debug("In node widget Setting scale of #{@label} to #{value} = #{@scale}")
+            #debug("In node widget Setting scale of #{@label} to #{value} = #{@scale}")
             @width = IMAGE_CIRCLE_SIZE * scale.to_f
             @height = IMAGE_CIRCLE_SIZE * scale.to_f
             # Only in explorer mode do we dull out nodes on the outer edge
@@ -2427,7 +2427,6 @@ module Wads
                 text = rn.get_text_widget
                 if text
                     if overlaps_with_a_node(text)
-                        debug("#{text.label} overlaps with other text")
                         move_text_for_node(rn)
                     else 
                         move_in_bounds = false
@@ -2599,7 +2598,6 @@ module Wads
             random_y = size_of_y_band / 8
             half_random_x = random_x / 2
             half_random_y = random_y / 2
-            debug("Band sizes: #{size_of_x_band}, #{size_of_y_band}")
 
             # Precompute the band center points
             # then reference by the scale or depth values below

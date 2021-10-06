@@ -25,6 +25,9 @@ module Wads
     DEG_292_5 = DEG_270 + DEG_22_5
     DEG_337_5 = DEG_315 + DEG_22_5
 
+    #
+    # A convenience data structure to store multiple, named sets of key/value pairs
+    #
     class HashOfHashes 
         attr_accessor :data
 
@@ -32,6 +35,9 @@ module Wads
             @data = {}
         end
 
+        #
+        # Store the value y based on the key x for the named data set
+        #
         def set(data_set_name, x, y)
             data_set = @data[data_set_name]
             if data_set.nil? 
@@ -41,6 +47,9 @@ module Wads
             data_set[x] = y
         end
 
+        #
+        # Retrieve the value for the given key x in the named data set
+        #
         def get(data_set_name, x)
             data_set = @data[data_set_name]
             if data_set.nil? 
@@ -49,6 +58,9 @@ module Wads
             data_set[x]
         end
 
+        #
+        # Get the list of keys for the named data set
+        #
         def keys(data_set_name)
             data_set = @data[data_set_name]
             if data_set.nil? 
@@ -58,6 +70,11 @@ module Wads
         end
     end 
 
+    #
+    # Stats allows you to maintain sets of data values, identified by a key,
+    # or data set name. You can then use Stats methods to get the count, average,
+    # sum, or percentiles for these keys.
+    #
     class Stats
         attr_accessor :name
         attr_accessor :data
@@ -251,6 +268,20 @@ module Wads
         end
     end
 
+    #
+    # A node in a graph data structure. Nodes can be used independently, and you
+    # connect them to other nodes, or you can use an overarching Graph instance
+    # to help manage them. Nodes can carry arbitrary metadata in the tags map.
+    # The children are either other nodes, or an Edge instance which can be used
+    # to add information about the connection. For example, in a map graph use
+    # case, the edge may contain information about the distance between the two
+    # nodes. In other applications, metadata about the edges, or connections,
+    # may not be necessary. This class, and the Graph data structure, support
+    # children in either form. Each child connection is a one-directional 
+    # connection. The backlinks are stored and managed internally so that we can
+    # easily navigate between nodes of the graph. Nodes themselves have a name
+    # an an optional value.
+    #
     class Node
         attr_accessor :name
         attr_accessor :value
@@ -416,6 +447,10 @@ module Wads
         end 
     end
 
+    # 
+    # An Edge is a connection between nodes that stores additional information
+    # as arbitrary tags, or name/value pairs.
+    #
     class Edge
         attr_accessor :destination
         attr_accessor :tags
@@ -434,6 +469,14 @@ module Wads
         end
     end 
 
+    #
+    # A Graph helps manage nodes by providing high level methods to 
+    # add or connect nodes to the graph. It also maintains a list of
+    # nodes and supports having multiple root nodes, i.e. nodes with
+    # no incoming connections.
+    # This class also supports constructing the graph from data stored
+    # in a file.
+    #
     class Graph 
         attr_accessor :node_list
         attr_accessor :node_map
@@ -628,14 +671,14 @@ module Wads
             end
         end 
 
+        # The format is a csv file as follows:
+        # N,name,value            --> nodes
+        # C,source,destination    --> connections (also called edges)
+        #
+        # Optionally, each line type can be followed by comma-separated tag=value
         def read_graph_from_file(filename)
             puts "Read graph data from file #{filename}"
             File.readlines(filename).each do |line|
-                # The format is a csv file as follows:
-                # N,name,value            --> nodes
-                # C,source,destination    --> connections, edges, links
-                #
-                # Optionally, each line type can be followed by comma-separated tag=value
                 line = line.chomp  # remove the carriage return
                 values = line.split(",")
                 type = values[0]
@@ -674,6 +717,11 @@ module Wads
         end
     end
 
+    #
+    # An internally used data structure that facilitates walking from the leaf nodes
+    # up to the top of the graph, such that a node is only visited once all of its
+    # descendants have been visited.
+    #
     class GraphReverseIterator
         attr_accessor :output
         def initialize(graph) 
@@ -699,6 +747,10 @@ module Wads
         end    
     end 
 
+    #
+    # A single dimension range, going from min to max. 
+    # This class has helper methods to create bins within the given range.
+    #
     class DataRange 
         attr_accessor :min
         attr_accessor :max
@@ -727,6 +779,10 @@ module Wads
         end
     end 
 
+    #
+    # A two dimensional range used by Plot to determine the visible area
+    # which can be a subset of the total data range(s)
+    #
     class VisibleRange
         attr_accessor :left_x
         attr_accessor :right_x

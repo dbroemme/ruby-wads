@@ -2,6 +2,12 @@ require 'gosu'
 require_relative 'widgets'
 
 module Wads
+    #
+    # The WadsApp class provides a simple starting point to quickly build a native
+    # Ruby application using Gosu as an underlying library. It provides all the necessary
+    # hooks to get started. All you need to do is supply the parent Wads widget using
+    # the set_display(widget) method. See one of the Wads samples for example usage.
+    #
     class WadsApp < Gosu::Window
         def initialize(width, height, caption = 'My App')
             super(width, height)
@@ -9,6 +15,10 @@ module Wads
             @update_count = 0
         end 
 
+        #
+        # This method must be invoked with any Wads::Widget instance. It then handles
+        # delegating all events and drawing all child widgets.
+        #
         def set_display(widget) 
             @main_widget = widget 
         end

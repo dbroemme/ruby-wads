@@ -2,6 +2,9 @@ require 'singleton'
 require 'logger'
 require_relative 'data_structures'
 
+#
+# All wads classes are contained within the wads module.
+#
 module Wads
     COLOR_PEACH = Gosu::Color.argb(0xffe6b0aa)
     COLOR_LIGHT_PURPLE = Gosu::Color.argb(0xffd7bde2)
@@ -93,12 +96,17 @@ module Wads
 
     FILL_VERTICAL_STACK = "fill_vertical"
     FILL_HORIZONTAL_STACK = "fill_horizontal"
-    FILL_FULL_SIZE = "fill_vertical"
+    FILL_FULL_SIZE = "fill_full_size"
 
     GRAPH_DISPLAY_ALL = "all"
     GRAPH_DISPLAY_EXPLORER = "explorer"
     GRAPH_DISPLAY_TREE = "tree"
 
+    #
+    # An instance of Coordinates references an x, y position on the screen
+    # as well as the width and height of the widget, thus providing the
+    # outer dimensions of a rectangular widget.
+    #
     class Coordinates 
         attr_accessor :x
         attr_accessor :y
@@ -112,6 +120,12 @@ module Wads
         end
     end 
 
+    #
+    # An instance of GuiTheme directs wads widgets as to what colors and fonts
+    # should be used. This accomplishes two goals: one, we don't need to constantly
+    # pass around these instances. They can be globally accessed using WadsConfig.
+    # It also makes it easy to change the look and feel of your application.
+    # 
     class GuiTheme 
         attr_accessor :text_color
         attr_accessor :graphic_elements_color
@@ -138,6 +152,9 @@ module Wads
         end
     end
 
+    #
+    # Theme with black text on a white background
+    #
     class WadsBrightTheme < GuiTheme 
         def initialize 
             super(COLOR_BLACK,                # text color
@@ -151,6 +168,10 @@ module Wads
         end 
     end
 
+    #
+    # Theme with white text on a black background that also does not use icons.
+    # Currently, icons are primarily used in the Graph display widget.
+    #
     class WadsNoIconTheme < GuiTheme 
         def initialize 
             super(COLOR_WHITE,                # text color
@@ -164,6 +185,10 @@ module Wads
         end 
     end
 
+    ##
+    # WadsConfig is the one singleton that provides access to resources
+    # used throughput the application, including fonts, themes, and layouts.
+    #
     class WadsConfig 
         include Singleton
 
@@ -176,13 +201,16 @@ module Wads
             @logger 
         end
 
+        #
+        # Wads uses the Ruby logger, and you can conrol the log level using this method.
         # Valid values are 'debug', 'info', 'warn', 'error'
         def set_log_level(level)
             get_logger.level = level
         end
         
         #
-        # Themes methods
+        # Get the default theme which is white text on a black background
+        # that uses icons (primarily used in the Graph display widget currently)
         #
         def get_default_theme 
             if @default_theme.nil?
@@ -198,6 +226,10 @@ module Wads
             @default_theme
         end
 
+        #
+        # Get a reference to the current theme. If one has not been set using
+        # set_current_theme(theme), the default theme will be used.
+        #
         def current_theme 
             if @current_theme.nil? 
                 @current_theme = get_default_theme 
@@ -205,12 +237,19 @@ module Wads
             @current_theme 
         end 
 
+        #
+        # Set the theme to be used by wads widgets
+        #
         def set_current_theme(theme) 
             @current_theme = theme 
         end
 
         #
-        # Layouts
+        # This method returns the default dimensions for the given widget type
+        # as a two value array of the form [width, height].
+        # This helps the layout manager allocate space to widgets within a layout
+        # and container. The string value max tells the layout to use all available
+        # space in that dimension (either x or y)
         #
         def default_dimensions(widget_type)
             if @default_dimensions.nil? 
@@ -273,7 +312,7 @@ module Wads
         end
 
         #
-        # Images methods
+        # Get a Gosu images instance for the specified color, i.e. COLOR_AQUA ir COLOR_BLUE
         #
         def circle(color)
             create_circles 
@@ -318,6 +357,12 @@ module Wads
         end
     end
 
+    #
+    # A Gui container is used to allocate space in the x, y two dimensional space to widgets
+    # and keep track of where the next widget in the container will be placed.
+    # The fill type is one of FILL_VERTICAL_STACK, FILL_HORIZONTAL_STACK, or FILL_FULL_SIZE.
+    # Layouts used containers to allocate space across the entire visible application.
+    #
     class GuiContainer 
         attr_accessor :start_x
         attr_accessor :start_y
@@ -439,7 +484,8 @@ module Wads
         end
     end
 
-    # A base class for all layouts
+    # The base class for all wads layouts. It has helper methods to add
+    # different types of widgets to the layout.
     class WadsLayout 
         attr_accessor :border_coords
         attr_accessor :parent_widget
@@ -600,6 +646,11 @@ module Wads
         end
     end 
 
+    # SectionLayout is an intermediate class in the layout class hierarchy
+    # that is used to divide the visible screen into different sections.
+    # The commonly used sections include LAYOUT_TOP or LAYOUT_NORTH,
+    # LAYOUT_MIDDLE or LAYOUT_CENTER, LAYOUT_BOTTOM or LAYOUT_SOUTH,
+    # LAYOUT_LEFT or LAYOUT_WEST, LAYOUT_RIGHT or LAYOUT_EAST.
     class SectionLayout < WadsLayout
         attr_accessor :container_map
 
@@ -608,6 +659,11 @@ module Wads
             @container_map = {}
         end
 
+        #
+        # Get the coordinates for the given element type. A generic map of parameters
+        # is accepted, however the  ARG_SECTION is required so the layout can determine
+        # which section or container is used.
+        #
         def get_coordinates(element_type, args = {})
             section = args[ARG_SECTION]
             if section.nil?
@@ -620,6 +676,11 @@ module Wads
             container.get_coordinates(element_type, args)
         end
 
+        #
+        # This is a convenience method that creates a panel divided into a left and right,
+        # or east and west section. It will take up the entire space of the specified 
+        # ARG_SECTION in the args map.
+        #
         def add_east_west_panel(args)
             section = args[ARG_SECTION]
             if section.nil?
@@ -636,17 +697,18 @@ module Wads
         end
     end 
 
+    # The layout sections are as follows:
+    #
+    #   +-------------------------------------------------+
+    #   +                  LAYOUT_NORTH                   +
+    #   +-------------------------------------------------+
+    #   +                                                 +
+    #   +                  LAYOUT_CENTER                  +
+    #   +                                                 +
+    #   +-------------------------------------------------+
     class HeaderContentLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
             super
-            #   +-------------------------------------------------+
-            #   +                  LAYOUT_NORTH                   +
-            #   +-------------------------------------------------+
-            #   +                                                 +
-            #   +                  LAYOUT_CENTER                  +
-            #   +                                                 +
-            #   +-------------------------------------------------+
-
             # Divide the height into 100, 100, and the middle gets everything else
             # Right now we are using 100 pixels rather than a percentage for the borders
             middle_section_y_start = y + 100
@@ -656,17 +718,18 @@ module Wads
         end
     end 
 
+    # The layout sections are as follows:
+    #
+    #   +-------------------------------------------------+
+    #   +                                                 +
+    #   +                  LAYOUT_CENTER                  +
+    #   +                                                 +
+    #   +-------------------------------------------------+
+    #   +                  LAYOUT_SOUTH                   +
+    #   +-------------------------------------------------+
     class ContentFooterLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
             super
-            #   +-------------------------------------------------+
-            #   +                                                 +
-            #   +                  LAYOUT_CENTER                  +
-            #   +                                                 +
-            #   +-------------------------------------------------+
-            #   +                  LAYOUT_SOUTH                   +
-            #   +-------------------------------------------------+
-            #
             # Divide the height into 100, 100, and the middle gets everything else
             # Right now we are using 100 pixels rather than a percentage for the borders
             bottom_section_height = 100
@@ -681,15 +744,17 @@ module Wads
         end
     end 
 
+    # The layout sections are as follows:
+    #
+    #   +-------------------------------------------------+
+    #   +                        |                        +
+    #   +     LAYOUT_WEST        |     LAYOUT_EAST        +
+    #   +                        |                        +
+    #   +-------------------------------------------------+
+    #
     class EastWestLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
             super
-            #   +-------------------------------------------------+
-            #   +                        |                        +
-            #   +     LAYOUT_WEST        |     LAYOUT_EAST        +
-            #   +                        |                        +
-            #   +-------------------------------------------------+
-            #
             west_section_width = width / 2
             if args[ARG_DESIRED_WIDTH]
                 west_section_width = args[ARG_DESIRED_WIDTH]
@@ -704,22 +769,20 @@ module Wads
         end
     end 
 
-
-
-
+    # The layout sections are as follows:
+    #
+    #   +-------------------------------------------------+
+    #   +                  LAYOUT_NORTH                   +
+    #   +-------------------------------------------------+
+    #   +                                                 +
+    #   +                  LAYOUT_CENTER                  +
+    #   +                                                 +
+    #   +-------------------------------------------------+
+    #   +                  LAYOUT_SOUTH                   +
+    #   +-------------------------------------------------+
     class TopMiddleBottomLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
             super
-            #   +-------------------------------------------------+
-            #   +                  LAYOUT_NORTH                   +
-            #   +-------------------------------------------------+
-            #   +                                                 +
-            #   +                  LAYOUT_CENTER                  +
-            #   +                                                 +
-            #   +-------------------------------------------------+
-            #   +                  LAYOUT_SOUTH                   +
-            #   +-------------------------------------------------+
-
             # Divide the height into 100, 100, and the middle gets everything else
             # Right now we are using 100 pixels rather than a percentage for the borders
             middle_section_y_start = y + 100
@@ -732,19 +795,20 @@ module Wads
         end
     end 
 
+    # The layout sections are as follows:
+    #
+    #   +-------------------------------------------------+
+    #   +                  LAYOUT_NORTH                   +
+    #   +-------------------------------------------------+
+    #   +             |                     |             +
+    #   + LAYOUT_WEST |    LAYOUT_CENTER    | LAYOUT_EAST +
+    #   +             |                     |             +
+    #   +-------------------------------------------------+
+    #   +                  LAYOUT_SOUTH                   +
+    #   +-------------------------------------------------+
     class BorderLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
             super
-            #   +-------------------------------------------------+
-            #   +                  LAYOUT_NORTH                   +
-            #   +-------------------------------------------------+
-            #   +             |                     |             +
-            #   + LAYOUT_WEST |    LAYOUT_CENTER    | LAYOUT_EAST +
-            #   +             |                     |             +
-            #   +-------------------------------------------------+
-            #   +                  LAYOUT_SOUTH                   +
-            #   +-------------------------------------------------+
-            #
             # Divide the height into 100, 100, and the middle gets everything else
             # Right now we are using 100 pixels rather than a percentage for the borders
             middle_section_y_start = y + 100
@@ -775,6 +839,48 @@ module Wads
         end
     end 
 
+    # The base class for all widgets. This class provides basic functionality for
+    # all gui widgets including maintaining the coordinates and layout used.
+    # A widget has a border and background, whose colors are defined by the theme.
+    # These can be turned off using the disable_border and disable_background methods.
+    # Widgets support a hierarchy of visible elements on the screen. For example,
+    # a parent widget may be a form, and it may contain many child widgets such as
+    # text labels, input fields, and a submit button. You can add children to a 
+    # widget using the add or add_child methods. Children are automatically rendered
+    # so any child does not need an explicit call to its draw or render method.
+    # Children can be placed with x, y positioning relative to their parent for convenience
+    # (see the relative_x and relative_y methods).
+    # TODO talk about draw and update
+    # def draw 
+    #   if @visible 
+    #    render
+    #    if @is_selected
+    #        draw_background(Z_ORDER_SELECTION_BACKGROUND, @gui_theme.selection_color)
+    #    elsif @show_background
+    #        draw_background
+    #    end
+    #    if @show_border
+    #        draw_border
+    #    end
+    #    @children.each do |child| 
+    #        child.draw 
+    #    end 
+    #  end 
+    #end
+    #def update(update_count, mouse_x, mouse_y)
+    #  if @overlay_widget 
+    #    @overlay_widget.update(update_count, mouse_x, mouse_y)
+    #  end
+    #  handle_update(update_count, mouse_x, mouse_y) 
+    #  @children.each do |child| 
+    #    child.update(update_count, mouse_x, mouse_y) 
+    #  end 
+    #end
+    #      usually there is one main widget that Gosu invokes these methods, and then
+    #      wads recursively calls them on all children
+    # TODO talk about contains_click(mouse_x, mouse_y)
+    #      overlaps_with(other_widget)
+    # 
     class Widget 
         attr_accessor :x
         attr_accessor :y 
@@ -875,6 +981,12 @@ module Wads
             @gui_theme.text_color 
         end 
 
+        #
+        # The z order is determined by taking the base_z and adding the widget specific value.
+        # An overlay widget has a base_z that is +10 higher than the widget underneath it.
+        # The widget_z method provides a relative ordering that is common for user interfaces.
+        # For example, text is higher than graphic elements and backgrounds.
+        #
         def z_order 
             @base_z + widget_z
         end
@@ -883,24 +995,43 @@ module Wads
             @base_z + relative_order 
         end
 
+        #
+        # Add a child widget that will automatically be drawn by this widget and will received
+        # delegated events. This is an alias for add_child
+        #
         def add(child) 
             add_child(child)
         end 
 
+        #
+        # Add a child widget that will automatically be drawn by this widget and will received
+        # delegated events.
+        #
         def add_child(child) 
             @children << child 
         end
 
+        #
+        # Remove the given child widget
+        #
         def remove_child(child)
             @children.delete(child)
         end
 
+        #
+        # Remove a list of child widgets
+        #
         def remove_children(list)
             list.each do |child|
                 @children.delete(child)
             end
         end 
 
+        #
+        # Remove all children whose class name includes the given token.
+        # This method can be used if you do not have a saved list of the
+        # widgets you want to remove.
+        #
         def remove_children_by_type(class_name_token)
             children_to_remove = []
             @children.each do |child|
@@ -913,40 +1044,89 @@ module Wads
             end
         end
 
+        #
+        # Remove all children from this widget
+        #
         def clear_children 
             @children = [] 
         end
 
+        #
+        # Drawing the background is on by default. Use this method to prevent drawing a background.
+        #
         def disable_background
             @show_background = false
         end
 
+        #
+        # Drawing the border is on by default. Use this method to prevent drawing a border.
+        #
         def disable_border
             @show_border = false 
         end
 
+        #
+        # A convenience method, or alias, to return the left x coordinate of this widget.
+        #
+        def left_edge
+            @x
+        end
+
+        #
+        # A convenience method to return the right x coordinate of this widget.
+        #
         def right_edge
             @x + @width - 1
         end
-        
+
+        #
+        # A convenience method, or alias, to return the top y coordinate of this widget.
+        #
+        def top_edge
+            @y
+        end
+
+        #
+        # A convenience method to return the bottom y coordinate of this widget
+        #
         def bottom_edge
             @y + @height - 1
         end
 
+        #
+        # A convenience method to return the center x coordinate of this widget
+        #
         def center_x
             @x + ((right_edge - @x) / 2)
         end 
 
+        #
+        # A convenience method to return the center y coordinate of this widget
+        #
         def center_y
             @y + ((bottom_edge - @y) / 2)
         end 
 
+        #
+        # Move this widget to an absolute x, y position on the screen. 
+        # It will automatically move all child widgets, however be warned that
+        # if you are manually rendering any elements within your own render
+        # logic, you will need to deal with that seperately as the base class
+        # does not have access to its coordinates.
+        #
         def move_recursive_absolute(new_x, new_y)
             delta_x = new_x - @x 
             delta_y = new_y - @y
             move_recursive_delta(delta_x, delta_y)
         end
 
+        #
+        # Move this widget to a relative number of x, y pixels on the screen. 
+        # It will automatically move all child widgets, however be warned that
+        # if you are manually rendering any elements within your own render
+        # logic, you will need to deal with that seperately as the base class
+        # does not have access to its coordinates.
+        #
         def move_recursive_delta(delta_x, delta_y)
             @x = @x + delta_x
             @y = @y + delta_y
@@ -955,6 +1135,16 @@ module Wads
             end 
         end
 
+        #
+        # The primary draw method, used by the main Gosu loop draw method.
+        # A common usage pattern is to have a primary widget in your Gosu app
+        # that calls this draw method. All children of this widget are then
+        # automatically drawn by this method recursively.
+        # NOTE: As a widget author, you should only implement/override the
+        #       render method. This is a framework implementation that will
+        #       handle child rendering and invoke render as a user-implemented
+        #       callback.
+        #
         def draw 
             if @visible 
                 render
@@ -1002,6 +1192,11 @@ module Wads
             mouse_x >= @x and mouse_x <= right_edge and mouse_y >= @y and mouse_y <= bottom_edge
         end
 
+        #
+        # Return true if any part of the given widget overlaps on the screen with this widget
+        # as defined by the rectangle from the upper left corner to the bottom right.
+        # Note that your widget may not necessariliy draw pixels in this entire space.
+        #
         def overlaps_with(other_widget)
             if other_widget.contains_click(@x, @y)
                 return true 
@@ -1021,7 +1216,12 @@ module Wads
             return false
         end
 
-
+        #
+        # The framework implementation of the main Gosu update loop. This method
+        # propagates the event to all child widgets as well.
+        # As a widget author, do not override this method.
+        # Your callback to implement is the handle_update(update_count, mouse_x, mouse_y) method.
+        #
         def update(update_count, mouse_x, mouse_y)
             if @overlay_widget 
                 @overlay_widget.update(update_count, mouse_x, mouse_y)
@@ -1032,6 +1232,15 @@ module Wads
             end 
         end
 
+        #
+        # The framework implementation of the main Gosu button down method.
+        # This method separates out mouse events from keyboard events, and calls the appropriate
+        # callback. As a widget author, do not override this method.
+        # Your callbacks to implement are:
+        #   handle_mouse_down(mouse_x, mouse_y)
+        #   handle_right_mouse(mouse_x, mouse_y)
+        #   handle_key_press(id, mouse_x, mouse_y)
+        #
         def button_down(id, mouse_x, mouse_y)
             if @overlay_widget 
                 result = @overlay_widget.button_down(id, mouse_x, mouse_y)
@@ -1078,6 +1287,14 @@ module Wads
             end 
         end
 
+        #
+        # The framework implementation of the main Gosu button up method.
+        # This method separates out mouse events from keyboard events.
+        # Only the mouse up event is propagated through the child hierarchy.
+        # As a widget author, do not override this method.
+        # Your callback to implement is:
+        #   handle_mouse_up(mouse_x, mouse_y)
+        #
         def button_up(id, mouse_x, mouse_y)
             if @overlay_widget 
                 return @overlay_widget.button_up(id, mouse_x, mouse_y)
@@ -1102,24 +1319,32 @@ module Wads
             end
         end
 
+        #
+        # Return the absolute x coordinate given the relative x pixel to this widget
+        #
         def relative_x(x)
             x_pixel_to_screen(x)
         end 
 
+        # An alias for relative_x
         def x_pixel_to_screen(x)
             @x + x
         end
 
+        #
+        # Return the absolute y coordinate given the relative y pixel to this widget
+        #
         def relative_y(y)
             y_pixel_to_screen(y)
         end 
 
+        # An alias for relative_y
         def y_pixel_to_screen(y)
             @y + y
         end
 
         #
-        # Relative positioning methods
+        # Add a child text widget using x, y positioning relative to this widget
         #
         def add_text(message, rel_x, rel_y, color = nil, use_large_font = false)
             new_text = Text.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), message, color, use_large_font)
@@ -1128,6 +1353,9 @@ module Wads
             new_text
         end 
 
+        #
+        # Add a child document widget using x, y positioning relative to this widget
+        #
         def add_document(content, rel_x, rel_y, width, height)
             new_doc = Document.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                                    width, height,
@@ -1137,18 +1365,26 @@ module Wads
             new_doc
         end
 
+        #
+        # Add a child button widget using x, y positioning relative to this widget.
+        # The width of the button will be determined based on the label text unless
+        # specified in the optional parameter. The code to execute is provided as a
+        # block, as shown in the example below.
+        # add_button("Test Button", 10, 10) do 
+        #   puts "User hit the test button"
+        # end
         def add_button(label, rel_x, rel_y, width = nil, &block)
-            new_button = Button.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), label)
-            if width.nil?
-                width = 60
-            end
-            new_button.width = width
+            new_button = Button.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), label, width)
             new_button.set_action(&block)
             new_button.base_z = @base_z
             add_child(new_button)
             new_button
         end
 
+        #
+        # Add a child delete button widget using x, y positioning relative to this widget.
+        # A delete button is a regular button that is rendered as a red X, instead of a text label.
+        #
         def add_delete_button(rel_x, rel_y, &block)
             new_delete_button = DeleteButton.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y))
             new_delete_button.set_action(&block)
@@ -1157,6 +1393,9 @@ module Wads
             new_delete_button 
         end
 
+        #
+        # Add a child table widget using x, y positioning relative to this widget.
+        # 
         def add_table(rel_x, rel_y, width, height, column_headers, max_visible_rows = 10)
             new_table = Table.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                               width, height, column_headers, max_visible_rows)
@@ -1165,6 +1404,10 @@ module Wads
             new_table
         end 
 
+        #
+        # Add a child table widget using x, y positioning relative to this widget.
+        # The user can select up to one and only one item in the table.
+        # 
         def add_single_select_table(rel_x, rel_y, width, height, column_headers, max_visible_rows = 10)
             new_table = SingleSelectTable.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                               width, height, column_headers, max_visible_rows)
@@ -1173,6 +1416,10 @@ module Wads
             new_table
         end 
 
+        #
+        # Add a child table widget using x, y positioning relative to this widget.
+        # The user can zero to many items in the table.
+        # 
         def add_multi_select_table(rel_x, rel_y, width, height, column_headers, max_visible_rows = 10)
             new_table = MultiSelectTable.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                               width, height, column_headers, max_visible_rows)
@@ -1181,6 +1428,9 @@ module Wads
             new_table
         end 
 
+        #
+        # Add a child graph display widget using x, y positioning relative to this widget.
+        # 
         def add_graph_display(rel_x, rel_y, width, height, graph)
             new_graph = GraphWidget.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height, graph) 
             new_graph.base_z = @base_z
@@ -1188,6 +1438,9 @@ module Wads
             new_graph
         end
 
+        #
+        # Add a child plot display widget using x, y positioning relative to this widget.
+        # 
         def add_plot(rel_x, rel_y, width, height)
             new_plot = Plot.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height) 
             new_plot.base_z = @base_z
@@ -1195,6 +1448,9 @@ module Wads
             new_plot
         end
 
+        #
+        # Add child axis lines widget using x, y positioning relative to this widget.
+        # 
         def add_axis_lines(rel_x, rel_y, width, height)
             new_axis_lines = AxisLines.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height) 
             new_axis_lines.base_z = @base_z
@@ -1202,6 +1458,9 @@ module Wads
             new_axis_lines
         end
 
+        #
+        # Add a child image widget using x, y positioning relative to this widget.
+        # 
         def add_image(filename, rel_x, rel_y)
             new_image = ImageWidget.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), img)
             new_image.base_z = @base_z
@@ -1209,15 +1468,18 @@ module Wads
             new_image
         end
 
+        #
+        # Add an overlay widget that is drawn on top of (at a higher z level) this widget
+        #
         def add_overlay(overlay)
             overlay.base_z = @base_z + 10
             add_child(overlay)
             @overlay_widget = overlay
         end
 
+        # For all child widgets, adjust the x coordinate
+        # so that they are centered.
         def center_children
-            # For all child widgets, adjust the x coordinate
-            # so that they are centered
             if @children.empty?
                 return 
             end
@@ -1236,39 +1498,66 @@ module Wads
         end
 
         #
-        # Callbacks for subclasses to override
+        # Override this method in your subclass to process mouse down events.
+        # The base implementation is empty
         #
         def handle_mouse_down mouse_x, mouse_y
             # empty base implementation
         end
 
+        #
+        # Override this method in your subclass to process mouse up events.
+        # The base implementation is empty
+        #
         def handle_mouse_up mouse_x, mouse_y
             # empty base implementation
         end
 
+        #
+        # Override this method in your subclass to process the right mouse click event.
+        # Note we do not differentiate between up and down for the right mouse button.
+        # The base implementation is empty
+        #
         def handle_right_mouse mouse_x, mouse_y
             # empty base implementation
         end
 
+        #
+        # Override this method in your subclass to process keyboard events.
+        # The base implementation is empty.
+        # Note that the mouse was not necessarily positioned over this widget.
+        # You can check this using the contains_click(mouse_x, mouse_y) method
+        # and decide if you want to process the event based on that, if desired.
+        #
         def handle_key_press id, mouse_x, mouse_y
             # empty base implementation
         end
 
+        #
+        # Override this method in your subclass to perform any logic needed
+        # as part of the main Gosu update loop. In most cases, this method is
+        # invoked 60 times per second.
+        #
         def handle_update update_count, mouse_x, mouse_y
             # empty base implementation
         end
 
+        #
+        # Override this method in your subclass to perform any custom rendering logic.
+        # Note that child widgets are automatically drawn and you do not need to do
+        # that yourself.
+        #
         def render 
             # Base implementation is empty
-            # Note that the draw method invoked by clients stills renders any added children
-            # render is for specific drawing done by the widget
         end 
 
+        #
+        # Return the relative z order compared to other widgets.
+        # The absolute z order is the base plus this value.
+        # Its calculated relative so that overlay widgets can be 
+        # on top of base displays.
+        #
         def widget_z 
-            # The relative z order compared to other widgets
-            # The absolute z order is the base plus this value.
-            # Its calculated relative so that overlay widgets can be 
-            # on top of base displays.
             0
         end
 
@@ -1278,12 +1567,22 @@ module Wads
         end
     end 
 
+    #
+    # A panel is simply an alias for a widget, although you can optionally
+    # treat them differently if you wish. Generally a panel is used to 
+    # apply a specific layout to a sub-section of the screen.
+    #
     class Panel < Widget
         def initialize(x, y, w, h, layout = nil) 
             super(x, y, w, h, layout)
         end
     end 
 
+    #
+    # Displays an image on the screen at the specific x, y location. The image
+    # can be scaled by setting the scale attribute. The image attribute to the
+    # construcor can be the string file location or a Gosu::Image instance
+    #
     class ImageWidget < Widget
         attr_accessor :img 
         attr_accessor :scale
@@ -1312,6 +1611,12 @@ module Wads
         end
     end 
 
+    #
+    # Displays a text label on the screen at the specific x, y location.
+    # The font specified by the current theme is used.
+    # The theme text color is used, unless the color parameter specifies an override.
+    # The small font is used by default, unless the use_large_font parameter is true.
+    #
     class Text < Widget
         attr_accessor :label
 
@@ -1349,12 +1654,19 @@ module Wads
         end
     end 
 
+    #
+    # An ErrorMessage is a subclass of text that uses a red color
+    #
     class ErrorMessage < Text
         def initialize(x, y, message) 
             super(x, y, "ERROR: #{message}", COLOR_ERROR_CODE_RED)
         end
     end 
 
+    #
+    # A data point to be used in a Plot widget. This object holds
+    # the x, y screen location as well as the data values for x, y.
+    #
     class PlotPoint < Widget
         attr_accessor :data_x
         attr_accessor :data_y
@@ -1397,6 +1709,16 @@ module Wads
             end
         end
     end 
+
+    #
+    # Displays a button at the specified x, y location.
+    # The button width is based on the label text unless specified
+    # using the optional parameter. The code to executeon a button
+    # click is specified using the set_action method, however typical
+    # using involves the widget or layout form of add_button. For example:
+    # add_button("Test Button", 10, 10) do 
+    #   puts "User hit the test button"
+    # end
 
     class Button < Widget
         attr_accessor :label
@@ -1453,6 +1775,9 @@ module Wads
         end
     end 
 
+    #
+    # A subclass of button that renders a red X instead of label text
+    #
     class DeleteButton < Button
         def initialize(x, y) 
             super(x, y, "ignore", 50)
@@ -1466,6 +1791,9 @@ module Wads
         end 
     end 
 
+    #
+    # Displays multiple lines of text content at the specified coordinates
+    #
     class Document < Widget
         attr_accessor :lines
 
@@ -1584,6 +1912,14 @@ module Wads
         end
     end 
 
+    #
+    # A result object returned from handle methods that instructs the parent widget
+    # what to do. A close_widget value of true instructs the recipient to close
+    # either the overlay window or the entire app, based on the context of the receiver.
+    # In the case of a form being submitted, the action may be "OK" and the form_data
+    # contains the information supplied by the user.
+    # WidgetResult is intentionally generic so it can support a wide variety of use cases.
+    #
     class WidgetResult 
         attr_accessor :close_widget
         attr_accessor :action
@@ -1596,6 +1932,10 @@ module Wads
         end
     end
 
+    #
+    # Renders a line from x, y to x2, y2. The theme graphics elements color
+    # is used by default, unless specified using the optional parameter.
+    #
     class Line < Widget
         attr_accessor :x2
         attr_accessor :y2
@@ -1622,6 +1962,10 @@ module Wads
         end
     end 
 
+    #
+    # A very specific widget used along with a Plot to draw the x and y axis lines.
+    # Note that the labels are drawn using separate widgets.
+    #
     class AxisLines < Widget
         def initialize(x, y, width, height, color = nil) 
             super(x, y)
@@ -1640,6 +1984,9 @@ module Wads
         end
     end
 
+    #
+    # Labels and tic marks for the vertical axis on a plot
+    #
     class VerticalAxisLabel < Widget
         attr_accessor :label
 
@@ -1667,6 +2014,9 @@ module Wads
         end
     end 
 
+    #
+    # Labels and tic marks for the horizontal axis on a plot
+    #
     class HorizontalAxisLabel < Widget
         attr_accessor :label
 
@@ -1693,6 +2043,13 @@ module Wads
         end
     end 
 
+    #
+    # Displays a table of information at the given coordinates.
+    # The headers are an array of text labels to display at the top of each column.
+    # The max_visible_rows specifies how many rows are visible at once.
+    # If there are more data rows than the max, the arrow keys can be used to
+    # page up or down through the rows in the table.
+    #
     class Table < Widget
         attr_accessor :data_rows 
         attr_accessor :row_colors
@@ -1845,6 +2202,11 @@ module Wads
         end
     end
 
+    #
+    # A table where the user can select one row at a time.
+    # The selected row has a background color specified by the selection color of the
+    # current theme.
+    #
     class SingleSelectTable < Table
         attr_accessor :selected_row
 
@@ -1881,6 +2243,11 @@ module Wads
         end
     end 
 
+    #
+    # A table where the user can select multiple rows at a time.
+    # Selected rows have a background color specified by the selection color of the
+    # current theme.
+    #
     class MultiSelectTable < Table
         attr_accessor :selected_rows
 
@@ -1973,6 +2340,11 @@ module Wads
         end
     end 
 
+    #
+    # A two-dimensional graph display which plots a number of PlotPoint objects.
+    # Options include grid lines that can be displayed, as well as whether lines
+    # should be drawn connecting each point in a data set.
+    #
     class Plot < Widget
         attr_accessor :points
         attr_accessor :visible_range
@@ -2177,6 +2549,13 @@ module Wads
         end 
     end 
 
+    #
+    # A graphical representation of a node in a graph using a button-style, i.e
+    # a rectangular border with a text label.
+    # The choice to use this display class is dictated by the use_icons attribute
+    # of the current theme.
+    # Like images, the size of node widgets can be scaled.
+    # 
     class NodeWidget < Button
         attr_accessor :data_node
 
@@ -2218,6 +2597,13 @@ module Wads
         end
     end 
 
+    #
+    # A graphical representation of a node in a graph using circular icons 
+    # and adjacent text labels.
+    # The choice to use this display class is dictated by the use_icons attribute
+    # of the current theme.
+    # Like images, the size of node widgets can be scaled.
+    # 
     class NodeIconWidget < Widget
         attr_accessor :data_node
         attr_accessor :image
@@ -2285,6 +2671,17 @@ module Wads
         end
     end 
 
+    #
+    # Given a single node or a graph data structure, this widget displays
+    # a visualization of the graph using one of the available node widget classes.
+    # There are different display modes that control what nodes within the graph 
+    # are shown. The default display mode, GRAPH_DISPLAY_ALL, shows all nodes
+    # as the name implies. GRAPH_DISPLAY_TREE assumes an acyclic graph and renders
+    # the graph in a tree-like structure. GRAPH_DISPLAY_EXPLORER has a chosen
+    # center focus node with connected nodes circled around it based on the depth
+    # or distance from that node. This mode also allows the user to click on
+    # different nodes to navigate the graph and change focus nodes.
+    #
     class GraphWidget < Widget
         attr_accessor :graph
         attr_accessor :selected_node

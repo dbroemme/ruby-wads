@@ -10,3 +10,10 @@
 
 - Fixed bugs with data structures. Added convenience methods to manage child widgets
 
+## [0.1.3] - 2021-09-30
+
+- Improvements to graph display including user ability to change focus node
+
+## [0.2.0] - 2021-10-05
+
+- Breaking change in order to standardize order of widget constructor args

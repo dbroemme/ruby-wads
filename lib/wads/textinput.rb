@@ -1,5 +1,7 @@
 require 'gosu'
 
+module Wads
+
 class TextField < Gosu::TextInput
   # Some constants that define our appearance.
   INACTIVE_COLOR  = 0xcc666666
@@ -130,3 +132,5 @@ class TextField < Gosu::TextInput
       # empty base implementation
   end
 end
+
+end # end wads module

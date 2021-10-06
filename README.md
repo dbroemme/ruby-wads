@@ -2,6 +2,15 @@
 
 A number of Ruby Gosu-based (W)idgets (a)nd (D)ata (S)tructures for your applications.
 
+Wads (Widgets and Data Structures) is intended to help you quickly build native Ruby applications using the Gosu gem.
+GUI widgets, such as tables and buttons, are provided to simplify building graphical applications.
+Widgets in wads can be used independently within your Gosu app, or you can use wads as a holistic GUI framework.
+Wads includes basic features found in many GUI toolkits including The use of themes and a layout manager.
+
+One of the motivations for creating wads is to making data analysis, games, and productivity applications using Ruby easier to do.
+Data structures are included that can be used for statistical analysis or graph-based applications.
+The samples provided illustrate both use cases (Stocks - stats) and Star Wars character interactions (graphs).
+
 ![alt Screenshot](https://github.com/dbroemme/ruby-wads/blob/main/media/WadsScreenshot.png?raw=true)
 ## Installation
 

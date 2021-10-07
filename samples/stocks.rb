@@ -8,8 +8,7 @@ class SampleStocksApp < WadsApp
     STOCKS_DATA_FILE = "./data/NASDAQ.csv"
 
     def initialize
-        super(800, 600, "Wads Sample Stocks App")
-        set_display(StocksDisplay.new(process_stock_data))
+        super(800, 600, "Wads Sample Stocks App", StocksDisplay.new(process_stock_data))
     end 
 
     def process_stock_data 

@@ -8,8 +8,7 @@ class SampleGraphApp < WadsApp
     SAMPLE_GRAPH_DEFINITION_FILE = "./data/sample_graph.csv"
 
     def initialize
-        super(800, 600, "Wads Sample Graph App")
-        set_display(GraphDisplay.new(create_sample_graph))
+        super(800, 600, "Wads Sample Graph App", GraphDisplay.new(create_sample_graph))
     end 
 
     #

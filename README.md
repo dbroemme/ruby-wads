@@ -2,6 +2,8 @@
 
 A number of Ruby Gosu-based (W)idgets (a)nd (D)ata (S)tructures for your applications.
 
+The user guide and examples can be found at https://www.rubydoesitagain.com
+
 Wads (Widgets and Data Structures) is intended to help you quickly build native Ruby applications using the Gosu gem.
 GUI widgets, such as tables and buttons, are provided to simplify building graphical applications.
 Widgets in wads can be used independently within your Gosu app, or you can use wads as a holistic GUI framework.

@@ -9,8 +9,7 @@ class SampleStarWarsApp < WadsApp
     STAR_WARS_DATA_FILE = "./data/starwars-episode-4-interactions.json"
 
     def initialize
-        super(800, 800, "Wads Sample Star Wars App")
-        set_display(StarWarsDisplay.new(process_star_wars_data))
+        super(800, 800, "Wads Sample Star Wars App", StarWarsDisplay.new(process_star_wars_data))
     end 
 
     def process_star_wars_data 

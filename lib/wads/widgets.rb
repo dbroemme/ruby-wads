@@ -80,11 +80,14 @@ module Wads
     LAYOUT_BOTTOM = "south"
     LAYOUT_LEFT = "west"
     LAYOUT_RIGHT = "east"
-    LAYOUT_NORTH = "north"
-    LAYOUT_SOUTH = "south"
+    LAYOUT_NORTH = LAYOUT_TOP
+    LAYOUT_HEADER = LAYOUT_TOP
+    LAYOUT_SOUTH = LAYOUT_BOTTOM
+    LAYOUT_FOOTER = LAYOUT_BOTTOM
     LAYOUT_WEST = "west"
     LAYOUT_EAST = "east"
     LAYOUT_CENTER = "center"
+    LAYOUT_CONTENT = LAYOUT_CENTER
 
     LAYOUT_VERTICAL_COLUMN = "vcolumn"
     LAYOUT_TOP_MIDDLE_BOTTOM = "top_middle_bottom"
@@ -447,8 +450,7 @@ module Wads
 
             # Not all elements require padding
             padding_exempt = [ELEMENT_IMAGE, ELEMENT_HORIZONTAL_PANEL,
-                ELEMENT_VERTICAL_PANEL, ELEMENT_TABLE, ELEMENT_GENERIC,
-                ELEMENT_PLOT, ELEMENT_MAX_PANEL].include? element_type
+                ELEMENT_VERTICAL_PANEL, ELEMENT_GENERIC, ELEMENT_MAX_PANEL].include? element_type
             if padding_exempt
                 # No padding
                 width_to_use = the_width
@@ -619,6 +621,10 @@ module Wads
 
         def add_vertical_panel(args = {})
             internal_add_panel(ELEMENT_VERTICAL_PANEL, args)
+        end 
+
+        def add_max_panel(args = {})
+            internal_add_panel(ELEMENT_MAX_PANEL, args)
         end 
 
         def internal_add_panel(orientation, args)
@@ -850,36 +856,38 @@ module Wads
     # so any child does not need an explicit call to its draw or render method.
     # Children can be placed with x, y positioning relative to their parent for convenience
     # (see the relative_x and relative_y methods).
-    # TODO talk about draw and update
-    # def draw 
-    #   if @visible 
-    #    render
-    #    if @is_selected
-    #        draw_background(Z_ORDER_SELECTION_BACKGROUND, @gui_theme.selection_color)
-    #    elsif @show_background
-    #        draw_background
-    #    end
-    #    if @show_border
-    #        draw_border
-    #    end
-    #    @children.each do |child| 
-    #        child.draw 
-    #    end 
-    #  end 
-    #end
-    #def update(update_count, mouse_x, mouse_y)
-    #  if @overlay_widget 
-    #    @overlay_widget.update(update_count, mouse_x, mouse_y)
-    #  end
-    #  handle_update(update_count, mouse_x, mouse_y) 
-    #  @children.each do |child| 
-    #    child.update(update_count, mouse_x, mouse_y) 
-    #  end 
-    #end
-    #      usually there is one main widget that Gosu invokes these methods, and then
-    #      wads recursively calls them on all children
-    # TODO talk about contains_click(mouse_x, mouse_y)
-    #      overlaps_with(other_widget)
+    #
+    # The draw and update methods are used by their Gosu counterparts.
+    # Typically there is one parent Wads widget used by a Gosu app, and it controls
+    # drawing all of the child widgets, invoking update on all widgets, and delegating
+    # user events. Widgets can override a render method for any specific drawing logic.
+    # It is worth showing the draw method here to amplify the point. You do not need
+    # to specifically call draw or render on any children. If you want to manage GUI
+    # elements outside of the widget hierarchy, then render is the best place to do it.
+    #
+    #   def draw 
+    #     if @visible 
+    #       render
+    #       if @is_selected
+    #         draw_background(Z_ORDER_SELECTION_BACKGROUND, @gui_theme.selection_color)
+    #       elsif @show_background
+    #         draw_background
+    #       end
+    #       if @show_border
+    #         draw_border
+    #       end
+    #       @children.each do |child| 
+    #         child.draw 
+    #       end 
+    #     end 
+    #   end
+    #
+    # Likewise, the update method recursively calls the handle_update method on all
+    # children in this widget's hierarchy.
+    #
+    # A commonly used method is contains_click(mouse_x, mouse_y) which returns
+    # whether this widget contained the mouse event. For a example, a button widget
+    # uses this method to determine if it was clicked.
     # 
     class Widget 
         attr_accessor :x
@@ -1066,6 +1074,20 @@ module Wads
         end
 
         #
+        # Turn back on drawing of the border
+        #
+        def enable_border
+            @show_border = true 
+        end
+
+        #
+        # Turn back on drawing of the background
+        #
+        def enable_background
+            @show_background = true 
+        end
+
+        #
         # A convenience method, or alias, to return the left x coordinate of this widget.
         #
         def left_edge
@@ -1140,10 +1162,10 @@ module Wads
         # A common usage pattern is to have a primary widget in your Gosu app
         # that calls this draw method. All children of this widget are then
         # automatically drawn by this method recursively.
-        # NOTE: As a widget author, you should only implement/override the
-        #       render method. This is a framework implementation that will
-        #       handle child rendering and invoke render as a user-implemented
-        #       callback.
+        # Note that as a widget author, you should only implement/override the
+        # render method. This is a framework implementation that will
+        # handle child rendering and invoke render as a user-implemented
+        # callback.
         #
         def draw 
             if @visible 
@@ -1175,11 +1197,6 @@ module Wads
             end
             Gosu::draw_rect(@x + 1, @y + 1, @width - 3, @height - 3, bgcolor, z) 
         end
-
-        #def draw_shadow(color)
-        #    Gosu::draw_line @x - 1, @y - 1, color, right_edge - 1, @y - 1, color, relative_z_order(Z_ORDER_BORDER)
-        #    Gosu::draw_line @x - 1, @y - 1, color, @x - 1, bottom_edge - 1, color, relative_z_order(Z_ORDER_BORDER)
-        #end
 
         def draw_border
             Gosu::draw_line @x, @y, @gui_theme.border_color, right_edge, @y, @gui_theme.border_color, relative_z_order(Z_ORDER_BORDER)
@@ -1370,9 +1387,9 @@ module Wads
         # The width of the button will be determined based on the label text unless
         # specified in the optional parameter. The code to execute is provided as a
         # block, as shown in the example below.
-        # add_button("Test Button", 10, 10) do 
-        #   puts "User hit the test button"
-        # end
+        #   add_button("Test Button", 10, 10) do 
+        #     puts "User hit the test button"
+        #   end
         def add_button(label, rel_x, rel_y, width = nil, &block)
             new_button = Button.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), label, width)
             new_button.set_action(&block)
@@ -2214,6 +2231,15 @@ module Wads
             super(x, y, width, height, headers, max_visible_rows) 
         end 
 
+        def is_row_selected(mouse_y)
+            row_number = determine_row_number(mouse_y)
+            if row_number.nil?
+                return false
+            end
+            selected_row = @current_row + row_number
+            @selected_row == selected_row
+        end 
+
         def set_selected_row(mouse_y, column_number)
             row_number = determine_row_number(mouse_y)
             if not row_number.nil?
@@ -2226,6 +2252,16 @@ module Wads
                 @selected_row = new_selected_row
                 @data_rows[@selected_row][column_number]
             end
+        end
+
+        def unset_selected_row(mouse_y, column_number) 
+            row_number = determine_row_number(mouse_y) 
+            if not row_number.nil?
+                this_selected_row = @current_row + row_number
+                @selected_row = this_selected_row
+                return @data_rows[this_selected_row][column_number]
+            end 
+            nil
         end
 
         def render 
@@ -2241,6 +2277,38 @@ module Wads
         def widget_z 
             Z_ORDER_TEXT
         end
+
+        def handle_mouse_down mouse_x, mouse_y
+            if contains_click(mouse_x, mouse_y)
+                row_number = determine_row_number(mouse_y)
+                if row_number.nil? 
+                    return WidgetResult.new(false)
+                end
+                # First check if its the delete button that got this
+                delete_this_row = false
+                @delete_buttons.each do |db|
+                    if db.contains_click(mouse_x, mouse_y)
+                        delete_this_row = true 
+                    end 
+                end 
+                if delete_this_row
+                    if not row_number.nil?
+                       data_set_row_to_delete = @current_row + row_number
+                       data_set_name_to_delete = @data_rows[data_set_row_to_delete][1]
+                       @data_rows.delete_at(data_set_row_to_delete)
+                       return WidgetResult.new(false, EVENT_TABLE_ROW_DELETE, [data_set_name_to_delete])                       
+                    end
+                else
+                    if is_row_selected(mouse_y)
+                        unset_selected_row(mouse_y, 0)
+                        return WidgetResult.new(false, EVENT_TABLE_UNSELECT, @data_rows[row_number])
+                    else
+                        set_selected_row(mouse_y, 0)
+                        return WidgetResult.new(false, EVENT_TABLE_SELECT, @data_rows[row_number])
+                    end
+                end
+            end
+        end
     end 
 
     #
@@ -2254,8 +2322,8 @@ module Wads
         def initialize(x, y, width, height, headers, max_visible_rows = 10) 
             super(x, y, width, height, headers, max_visible_rows) 
             @selected_rows = []
-        end 
-
+        end
+    
         def is_row_selected(mouse_y)
             row_number = determine_row_number(mouse_y)
             if row_number.nil?
@@ -2426,6 +2494,24 @@ module Wads
 
         def is_on_screen(point) 
             point.data_x >= @visible_range.left_x and point.data_x <= @visible_range.right_x and point.data_y >= @visible_range.bottom_y and point.data_y <= @visible_range.top_y
+        end 
+
+        def add_data_point(data_set_name, data_x, data_y, color = COLOR_MAROON) 
+            if range_set?
+                rendered_points = @points_by_data_set_name[data_set_name]
+                if rendered_points.nil?
+                    rendered_points = []
+                    @points_by_data_set_name[data_set_name] = rendered_points
+                end 
+                rendered_points << PlotPoint.new(draw_x(data_x), draw_y(data_y),
+                                                 data_x, data_y,
+                                                 color)
+                if @visibility_map[data_set_name].nil?
+                    @visibility_map[data_set_name] = true
+                end
+            else
+                error("ERROR: range not set, cannot add data")
+            end
         end 
 
         def add_data_set(data_set_name, rendered_points)

@@ -9,10 +9,11 @@ module Wads
     # the set_display(widget) method. See one of the Wads samples for example usage.
     #
     class WadsApp < Gosu::Window
-        def initialize(width, height, caption = 'My App')
+        def initialize(width, height, caption, widget)
             super(width, height)
             self.caption = caption
             @update_count = 0
+            set_display(widget) 
         end 
 
         #
@@ -27,10 +28,7 @@ module Wads
             @main_widget
         end
 
-        def update 
-            if @main_widget.nil? 
-                raise "Your app must call the set_display(widget) method in your constructor"
-            end
+        def update
             @main_widget.update(@update_count, mouse_x, mouse_y)
             @update_count = @update_count + 1
         end 

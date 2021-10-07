@@ -74,6 +74,11 @@ module Wads
     ARG_DESIRED_WIDTH = "desired_width"
     ARG_DESIRED_HEIGHT = "desired_height"
     ARG_LAYOUT = "layout"
+    ARG_TEXT_ALIGN = "text_align"
+
+    ALIGNMENT_LEFT = "left"
+    ALIGNMENT_CENTER = "center"
+    ALIGNMENT_RIGHT = "right"
 
     LAYOUT_TOP = "north"
     LAYOUT_MIDDLE = "center"
@@ -472,6 +477,18 @@ module Wads
                     height_to_use = the_height
                 end 
             end
+
+            # Text elements also honor ARG_TEXT_ALIGN 
+            arg_text_align = args[ARG_TEXT_ALIGN]
+            if not arg_text_align.nil?
+                # left is the default, so check for center or right
+                if arg_text_align == ALIGNMENT_CENTER 
+                    x_to_use = @next_x + ((@max_width - specified_width) / 2)
+                elsif arg_text_align == ALIGNMENT_RIGHT 
+                    x_to_use = @next_x + @max_width - specified_width - @padding
+                end
+            end
+
             coords = Coordinates.new(x_to_use, y_to_use,
                                      width_to_use, height_to_use)
 
@@ -634,6 +651,7 @@ module Wads
             new_panel.set_layout(LAYOUT_VERTICAL_COLUMN, args)
             new_panel.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_panel)
+            new_panel.disable_border
             new_panel
         end
     end 

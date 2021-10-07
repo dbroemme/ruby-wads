@@ -37,6 +37,8 @@ class ThemeTestDisplay < Widget
             render_east_west_layout
         elsif ARGV[0] == "plot"
             render_plot
+        elsif ARGV[0] == "form"
+            render_form
         else 
             puts "Argument #{ARGV[0]} is invalid."
             display_help 
@@ -200,6 +202,21 @@ class ThemeTestDisplay < Widget
         # Draw the 0 horizontal and vertical axes
         plot.add_child(Line.new(plot.draw_x(0), plot.draw_y(-5), plot.draw_x(0), plot.draw_y(5), COLOR_GRAY))
         plot.add_child(Line.new(plot.draw_x(-5), plot.draw_y(0), plot.draw_x(5), plot.draw_y(0), COLOR_GRAY))
+    end
+
+    def render_form
+        set_layout(LAYOUT_EAST_WEST)
+
+        label_panel = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_WEST})
+        label_panel.get_layout.add_text("First Name", { ARG_TEXT_ALIGN => ALIGNMENT_CENTER})
+        label_panel.get_layout.add_text("Middle Name", { ARG_TEXT_ALIGN => ALIGNMENT_CENTER})
+        label_panel.get_layout.add_text("Last Name", { ARG_TEXT_ALIGN => ALIGNMENT_CENTER})
+
+        field_panel = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_EAST})
+        field_panel.get_layout.add_text("John")
+        field_panel.get_layout.add_text("Michael")
+        field_panel.get_layout.add_text("Doe")
+
     end
 
 end

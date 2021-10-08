@@ -14,10 +14,13 @@ class TextField < Gosu::TextInput
   attr_accessor :base_z
   attr_accessor :old_value
   
-  def initialize(window, font, x, y, original_text, default_width)
+  def initialize(x, y, original_text, default_width)
     super()
     
-    @window, @font, @x, @y = window, font, x, y
+    @x = x
+    @y = y
+    @window = WadsConfig.instance.get_window
+    @font = WadsConfig.instance.current_theme.font
     @default_width = default_width
     @base_z = 0
     self.text = original_text

@@ -76,23 +76,23 @@ module Wads
     ARG_LAYOUT = "layout"
     ARG_TEXT_ALIGN = "text_align"
 
-    ALIGNMENT_LEFT = "left"
-    ALIGNMENT_CENTER = "center"
-    ALIGNMENT_RIGHT = "right"
+    TEXT_ALIGN_LEFT = "left"
+    TEXT_ALIGN_CENTER = "center"
+    TEXT_ALIGN_RIGHT = "right"
 
-    LAYOUT_TOP = "north"
-    LAYOUT_MIDDLE = "center"
-    LAYOUT_BOTTOM = "south"
-    LAYOUT_LEFT = "west"
-    LAYOUT_RIGHT = "east"
-    LAYOUT_NORTH = LAYOUT_TOP
-    LAYOUT_HEADER = LAYOUT_TOP
-    LAYOUT_SOUTH = LAYOUT_BOTTOM
-    LAYOUT_FOOTER = LAYOUT_BOTTOM
-    LAYOUT_WEST = "west"
-    LAYOUT_EAST = "east"
-    LAYOUT_CENTER = "center"
-    LAYOUT_CONTENT = LAYOUT_CENTER
+    SECTION_TOP = "north"
+    SECTION_MIDDLE = "center"
+    SECTION_BOTTOM = "south"
+    SECTION_LEFT = "west"
+    SECTION_RIGHT = "east"
+    SECTION_NORTH = SECTION_TOP
+    SECTION_HEADER = SECTION_TOP
+    SECTION_SOUTH = SECTION_BOTTOM
+    SECTION_FOOTER = SECTION_BOTTOM
+    SECTION_WEST = "west"
+    SECTION_EAST = "east"
+    SECTION_CENTER = "center"
+    SECTION_CONTENT = SECTION_CENTER
 
     LAYOUT_VERTICAL_COLUMN = "vcolumn"
     LAYOUT_TOP_MIDDLE_BOTTOM = "top_middle_bottom"
@@ -201,6 +201,7 @@ module Wads
         include Singleton
 
         attr_accessor :logger
+        attr_accessor :window
 
         def get_logger
             if @logger.nil?
@@ -215,7 +216,18 @@ module Wads
         def set_log_level(level)
             get_logger.level = level
         end
-        
+
+        def set_window(w)
+            @window = w 
+        end
+
+        def get_window
+            if @window.nil?
+                raise "The WadsConfig.instance.set_window(window) needs to be invoked from your Gosu app"
+            end
+            @window 
+        end
+
         #
         # Get the default theme which is white text on a black background
         # that uses icons (primarily used in the Graph display widget currently)
@@ -482,9 +494,9 @@ module Wads
             arg_text_align = args[ARG_TEXT_ALIGN]
             if not arg_text_align.nil?
                 # left is the default, so check for center or right
-                if arg_text_align == ALIGNMENT_CENTER 
+                if arg_text_align == TEXT_ALIGN_CENTER 
                     x_to_use = @next_x + ((@max_width - specified_width) / 2)
-                elsif arg_text_align == ALIGNMENT_RIGHT 
+                elsif arg_text_align == TEXT_ALIGN_RIGHT 
                     x_to_use = @next_x + @max_width - specified_width - @padding
                 end
             end
@@ -648,7 +660,11 @@ module Wads
             coordinates = get_coordinates(orientation, args)
             new_panel = Panel.new(coordinates.x, coordinates.y,
                                   coordinates.width, coordinates.height)
-            new_panel.set_layout(LAYOUT_VERTICAL_COLUMN, args)
+            new_panel_layout = args[ARG_LAYOUT]
+            if new_panel_layout.nil?
+                new_panel_layout = LAYOUT_VERTICAL_COLUMN
+            end
+            new_panel.set_layout(new_panel_layout, args)
             new_panel.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_panel)
             new_panel.disable_border
@@ -672,9 +688,9 @@ module Wads
 
     # SectionLayout is an intermediate class in the layout class hierarchy
     # that is used to divide the visible screen into different sections.
-    # The commonly used sections include LAYOUT_TOP or LAYOUT_NORTH,
-    # LAYOUT_MIDDLE or LAYOUT_CENTER, LAYOUT_BOTTOM or LAYOUT_SOUTH,
-    # LAYOUT_LEFT or LAYOUT_WEST, LAYOUT_RIGHT or LAYOUT_EAST.
+    # The commonly used sections include SECTION_TOP or SECTION_NORTH,
+    # SECTION_MIDDLE or SECTION_CENTER, SECTION_BOTTOM or SECTION_SOUTH,
+    # SECTION_LEFT or SECTION_WEST, SECTION_RIGHT or SECTION_EAST.
     class SectionLayout < WadsLayout
         attr_accessor :container_map
 
@@ -724,10 +740,10 @@ module Wads
     # The layout sections are as follows:
     #
     #   +-------------------------------------------------+
-    #   +                  LAYOUT_NORTH                   +
+    #   +                  SECTION_NORTH                  +
     #   +-------------------------------------------------+
     #   +                                                 +
-    #   +                  LAYOUT_CENTER                  +
+    #   +                  SECTION_CENTER                  +
     #   +                                                 +
     #   +-------------------------------------------------+
     class HeaderContentLayout < SectionLayout
@@ -737,8 +753,8 @@ module Wads
             # Right now we are using 100 pixels rather than a percentage for the borders
             middle_section_y_start = y + 100
             height_middle_section = height - 100
-            @container_map[LAYOUT_NORTH] = GuiContainer.new(x, y, width, 100)
-            @container_map[LAYOUT_CENTER] = GuiContainer.new(x, middle_section_y_start, width, height_middle_section, FILL_VERTICAL_STACK)
+            @container_map[SECTION_NORTH] = GuiContainer.new(x, y, width, 100)
+            @container_map[SECTION_CENTER] = GuiContainer.new(x, middle_section_y_start, width, height_middle_section, FILL_VERTICAL_STACK)
         end
     end 
 
@@ -746,10 +762,10 @@ module Wads
     #
     #   +-------------------------------------------------+
     #   +                                                 +
-    #   +                  LAYOUT_CENTER                  +
+    #   +                  SECTION_CENTER                  +
     #   +                                                 +
     #   +-------------------------------------------------+
-    #   +                  LAYOUT_SOUTH                   +
+    #   +                  SECTION_SOUTH                   +
     #   +-------------------------------------------------+
     class ContentFooterLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
@@ -763,7 +779,7 @@ module Wads
             bottom_section_y_start = y + height - bottom_section_height
             middle_section_height = height - bottom_section_height
             @container_map[LAYOUT_CENTER] = GuiContainer.new(x, y, width, middle_section_height, FILL_VERTICAL_STACK)
-            @container_map[LAYOUT_SOUTH] = GuiContainer.new(x, bottom_section_y_start,
+            @container_map[SECTION_SOUTH] = GuiContainer.new(x, bottom_section_y_start,
                                                             width, bottom_section_height)
         end
     end 
@@ -772,7 +788,7 @@ module Wads
     #
     #   +-------------------------------------------------+
     #   +                        |                        +
-    #   +     LAYOUT_WEST        |     LAYOUT_EAST        +
+    #   +     SECTION_WEST        |     SECTION_EAST        +
     #   +                        |                        +
     #   +-------------------------------------------------+
     #
@@ -784,10 +800,10 @@ module Wads
                 west_section_width = args[ARG_DESIRED_WIDTH]
             end
             east_section_width = width - west_section_width
-            @container_map[LAYOUT_WEST] = GuiContainer.new(x, y,
+            @container_map[SECTION_WEST] = GuiContainer.new(x, y,
                                                            west_section_width, height,
                                                            FILL_FULL_SIZE)
-            @container_map[LAYOUT_EAST] = GuiContainer.new(x + west_section_width, y,
+            @container_map[SECTION_EAST] = GuiContainer.new(x + west_section_width, y,
                                                            east_section_width, height,
                                                            FILL_FULL_SIZE)
         end
@@ -796,13 +812,13 @@ module Wads
     # The layout sections are as follows:
     #
     #   +-------------------------------------------------+
-    #   +                  LAYOUT_NORTH                   +
+    #   +                  SECTION_NORTH                   +
     #   +-------------------------------------------------+
     #   +                                                 +
-    #   +                  LAYOUT_CENTER                  +
+    #   +                  SECTION_CENTER                  +
     #   +                                                 +
     #   +-------------------------------------------------+
-    #   +                  LAYOUT_SOUTH                   +
+    #   +                  SECTION_SOUTH                   +
     #   +-------------------------------------------------+
     class TopMiddleBottomLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
@@ -812,23 +828,23 @@ module Wads
             middle_section_y_start = y + 100
             bottom_section_y_start = y + height - 100
             height_middle_section = height - 200
-            @container_map[LAYOUT_NORTH] = GuiContainer.new(x, y, width, 100)
-            @container_map[LAYOUT_CENTER] = GuiContainer.new(x, middle_section_y_start,
+            @container_map[SECTION_NORTH] = GuiContainer.new(x, y, width, 100)
+            @container_map[SECTION_CENTER] = GuiContainer.new(x, middle_section_y_start,
                                                              width, height_middle_section, FILL_VERTICAL_STACK)
-            @container_map[LAYOUT_SOUTH] = GuiContainer.new(x, bottom_section_y_start, width, 100)
+            @container_map[SECTION_SOUTH] = GuiContainer.new(x, bottom_section_y_start, width, 100)
         end
     end 
 
     # The layout sections are as follows:
     #
     #   +-------------------------------------------------+
-    #   +                  LAYOUT_NORTH                   +
+    #   +                  SECTION_NORTH                   +
     #   +-------------------------------------------------+
     #   +             |                     |             +
-    #   + LAYOUT_WEST |    LAYOUT_CENTER    | LAYOUT_EAST +
+    #   + SECTION_WEST |    SECTION_CENTER    | SECTION_EAST +
     #   +             |                     |             +
     #   +-------------------------------------------------+
-    #   +                  LAYOUT_SOUTH                   +
+    #   +                  SECTION_SOUTH                   +
     #   +-------------------------------------------------+
     class BorderLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
@@ -844,22 +860,22 @@ module Wads
             right_section_x_start = x + width - 100
             width_middle_section = right_section_x_start - middle_section_x_start
 
-            @container_map[LAYOUT_NORTH] = GuiContainer.new(x, y, width, 100)
-            @container_map[LAYOUT_WEST] = GuiContainer.new(
+            @container_map[SECTION_NORTH] = GuiContainer.new(x, y, width, 100)
+            @container_map[SECTION_WEST] = GuiContainer.new(
                 x, middle_section_y_start, 100, height_middle_section, FILL_VERTICAL_STACK)
-            @container_map[LAYOUT_CENTER] = GuiContainer.new(
+            @container_map[SECTION_CENTER] = GuiContainer.new(
                                    middle_section_x_start,
                                    middle_section_y_start,
                                    width_middle_section,
                                    height_middle_section,
                                    FILL_VERTICAL_STACK)
-            @container_map[LAYOUT_EAST] = GuiContainer.new(
+            @container_map[SECTION_EAST] = GuiContainer.new(
                                    right_section_x_start,
                                    middle_section_y_start,
                                    100,
                                    height_middle_section,
                                    FILL_VERTICAL_STACK)
-            @container_map[LAYOUT_SOUTH] = GuiContainer.new(x, bottom_section_y_start, width, 100)
+            @container_map[SECTION_SOUTH] = GuiContainer.new(x, bottom_section_y_start, width, 100)
         end
     end 
 
@@ -981,8 +997,16 @@ module Wads
             @layout = WadsConfig.instance.create_layout_for_widget(self, layout_type, args)
         end
 
+        def add_panel(section, args = {})
+            get_layout.add_max_panel({ ARG_SECTION => section}.merge(args))
+        end
+
         def get_theme 
             @gui_theme
+        end
+
+        def set_theme(new_theme)
+            @gui_theme = new_theme
         end
 
         def set_selected 
@@ -1875,9 +1899,8 @@ module Wads
     class Dialog < Widget
         attr_accessor :textinput
 
-        def initialize(x, y, width, height, window, title, text_input_default) 
+        def initialize(x, y, width, height, title, text_input_default) 
             super(x, y, width, height) 
-            @window = window
             @base_z = 10
             @error_message = nil
 
@@ -1886,7 +1909,7 @@ module Wads
             add_document(content, 0, 56, width, height)
 
             # Forms automatically get a text input widget
-            @textinput = TextField.new(@window, @gui_theme.font, x + 10, bottom_edge - 80, text_input_default, 600)
+            @textinput = TextField.new(x + 10, bottom_edge - 80, text_input_default, 600)
             @textinput.base_z = 10
             add_child(@textinput)
 
@@ -1933,9 +1956,9 @@ module Wads
 
         def handle_mouse_down mouse_x, mouse_y
             # Mouse click: Select text field based on mouse position.
-            @window.text_input = [@textinput].find { |tf| tf.under_point?(mouse_x, mouse_y) }
+            WadsConfig.instance.get_window.text_input = [@textinput].find { |tf| tf.under_point?(mouse_x, mouse_y) }
             # Advanced: Move caret to clicked position
-            @window.text_input.move_caret(mouse_x) unless @window.text_input.nil?
+            WadsConfig.instance.get_window.text_input.move_caret(mouse_x) unless WadsConfig.instance.get_window.text_input.nil?
 
             handle_mouse_click(mouse_x, mouse_y)
         end 

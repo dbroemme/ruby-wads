@@ -13,6 +13,7 @@ module Wads
             super(width, height)
             self.caption = caption
             @update_count = 0
+            WadsConfig.instance.set_window(self)
             set_display(widget) 
         end 
 

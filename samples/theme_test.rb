@@ -12,7 +12,6 @@ end
 class ThemeTestDisplay < Widget
     def initialize
         super(0, 0, 800, 600)
-        set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
         disable_border
 
         if ARGV.length == 0
@@ -54,29 +53,32 @@ class ThemeTestDisplay < Widget
         puts "  vertical   show VerticalColumnLayout"
         puts "  eastwest   show EastWestLayout"
         puts "  plot       show a simple plot using HeaderContentLayout"
+        puts "  form       test a form"
         exit
     end 
 
     def render_basic_widgets
+        set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
+
         # Example of using the layout for absolute positioning
         # and then relative positioning of a child widget
         # within that
-        image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => LAYOUT_TOP})
+        image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => SECTION_TOP})
         image.add_text("Banner", 10, 10)
 
-        get_layout.add_text("Hello", { ARG_SECTION => LAYOUT_CENTER})
-        get_layout.add_text("There", { ARG_SECTION => LAYOUT_CENTER})
-        get_layout.add_button("Test Button", { ARG_SECTION => LAYOUT_CENTER}) do 
+        get_layout.add_text("Hello", { ARG_SECTION => SECTION_CENTER})
+        get_layout.add_text("There", { ARG_SECTION => SECTION_CENTER})
+        get_layout.add_button("Test Button", { ARG_SECTION => SECTION_CENTER}) do 
             puts "User hit the test button"
         end
 
-        table = get_layout.add_multi_select_table(["A", "B", "C"], 4, { ARG_SECTION => LAYOUT_CENTER})
+        table = get_layout.add_multi_select_table(["A", "B", "C"], 4, { ARG_SECTION => SECTION_CENTER})
         table.add_row(["These", "are", "values in row 1"])
         table.add_row(["These", "are", "values in row 2"])
         table.add_row(["These", "are", "values in row 3"])
         table.add_row(["These", "are", "values in row 4"])
 
-        panel = get_layout.add_horizontal_panel({ ARG_SECTION => LAYOUT_BOTTOM})
+        panel = get_layout.add_horizontal_panel({ ARG_SECTION => SECTION_BOTTOM})
         panel.add_button("Exit", 0, panel.height - 30) do
             WidgetResult.new(true)
         end
@@ -86,24 +88,22 @@ class ThemeTestDisplay < Widget
     def render_header_layout
         set_layout(LAYOUT_HEADER_CONTENT)
 
-        header = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_HEADER})
-        # The zero x coord doesn't matter here because we center it below
-        # Centering only adjusts the x coordinate
-        header.add_text("I am the header section", 0, 35)
-        header.center_children
+        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_HEADER})
+        header.set_theme(WadsBrightTheme.new)
+        header.get_layout.add_text("I am the header section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
 
-        get_layout.add_document(sample_content, { ARG_SECTION => LAYOUT_CONTENT})
+        get_layout.add_document(sample_content, { ARG_SECTION => SECTION_CONTENT})
     end
 
     def render_border_layout
         set_layout(LAYOUT_BORDER)
-        header = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_NORTH})
+        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_NORTH})
         # The zero x coord doesn't matter here because we center it below
         # Centering only adjusts the x coordinate
         header.add_text("I am the header section", 0, 35)
         header.center_children
 
-        west = get_layout.add_vertical_panel({ ARG_SECTION => LAYOUT_WEST})
+        west = get_layout.add_vertical_panel({ ARG_SECTION => SECTION_WEST})
         west.get_layout.add_button("Do stuff") do 
             puts "Hit the do stuff button"
         end
@@ -111,13 +111,13 @@ class ThemeTestDisplay < Widget
             puts "Hit the more stuff button"
         end
 
-        get_layout.add_document(sample_content, { ARG_SECTION => LAYOUT_CENTER})
+        get_layout.add_document(sample_content, { ARG_SECTION => SECTION_CENTER})
 
-        east = get_layout.add_vertical_panel({ ARG_SECTION => LAYOUT_EAST})
+        east = get_layout.add_vertical_panel({ ARG_SECTION => SECTION_EAST})
         east.get_layout.add_text("item1")
         east.get_layout.add_text("item2")
 
-        footer = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_SOUTH})
+        footer = get_layout.add_max_panel({ ARG_SECTION => SECTION_SOUTH})
         # The zero x coord doesn't matter here because we center it below
         # Centering only adjusts the x coordinate
         footer.add_text("I am the footer section", 0, 35)
@@ -126,15 +126,15 @@ class ThemeTestDisplay < Widget
 
     def render_top_middle_bottom_layout
         set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
-        header = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_TOP})
+        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_TOP})
         # The zero x coord doesn't matter here because we center it below
         # Centering only adjusts the x coordinate
         header.add_text("I am the header section", 0, 35)
         header.center_children
 
-        get_layout.add_document(sample_content, { ARG_SECTION => LAYOUT_MIDDLE})
+        get_layout.add_document(sample_content, { ARG_SECTION => SECTION_MIDDLE})
 
-        footer = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_BOTTOM})
+        footer = get_layout.add_max_panel({ ARG_SECTION => SECTION_BOTTOM})
         # The zero x coord doesn't matter here because we center it below
         # Centering only adjusts the x coordinate
         footer.add_text("I am the footer section", 0, 35)
@@ -153,9 +153,9 @@ class ThemeTestDisplay < Widget
     def render_footer_layout
         set_layout(LAYOUT_CONTENT_FOOTER)
 
-        get_layout.add_document(sample_content, { ARG_SECTION => LAYOUT_CONTENT})
+        get_layout.add_document(sample_content, { ARG_SECTION => SECTION_CONTENT})
 
-        footer = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_FOOTER})
+        footer = get_layout.add_max_panel({ ARG_SECTION => SECTION_FOOTER})
         # The zero x coord doesn't matter here because we center it below
         # Centering only adjusts the x coordinate
         footer.add_text("I am the footer section", 0, 35)
@@ -171,25 +171,25 @@ class ThemeTestDisplay < Widget
 
     def render_east_west_layout 
         set_layout(LAYOUT_EAST_WEST)
-        table = get_layout.add_multi_select_table(["A", "B", ""], 4, { ARG_SECTION => LAYOUT_WEST})
+        table = get_layout.add_multi_select_table(["A", "B", ""], 4, { ARG_SECTION => SECTION_WEST})
         table.add_row(["Key1", "Value1"])
         table.add_row(["Key2", "Value2"])
         table.add_row(["Key3", "Value3"])
 
-        get_layout.add_document(sample_content, { ARG_SECTION => LAYOUT_EAST})
+        get_layout.add_document(sample_content, { ARG_SECTION => SECTION_EAST})
     end
 
     def render_plot
         set_layout(LAYOUT_HEADER_CONTENT)
 
-        header = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_HEADER})
+        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_HEADER})
         # The zero x coord doesn't matter here because we center it below
         # Centering only adjusts the x coordinate
         header.add_text("This is a plot of sine (yellow) and cosine (pink) waves", 0, 35)
         header.center_children
         header.disable_border
 
-        plot = get_layout.add_plot({ ARG_SECTION => LAYOUT_CONTENT})
+        plot = get_layout.add_plot({ ARG_SECTION => SECTION_CONTENT})
         plot.define_range(VisibleRange.new(-5, 5, -5, 5))
         plot.enable_border
         x = -5
@@ -205,14 +205,17 @@ class ThemeTestDisplay < Widget
     end
 
     def render_form
-        set_layout(LAYOUT_EAST_WEST)
+        set_layout(LAYOUT_CONTENT_FOOTER)
 
-        label_panel = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_WEST})
-        label_panel.get_layout.add_text("First Name", { ARG_TEXT_ALIGN => ALIGNMENT_CENTER})
-        label_panel.get_layout.add_text("Middle Name", { ARG_TEXT_ALIGN => ALIGNMENT_CENTER})
-        label_panel.get_layout.add_text("Last Name", { ARG_TEXT_ALIGN => ALIGNMENT_CENTER})
+        content_panel = get_layout.add_max_panel({ ARG_SECTION => SECTION_CONTENT,
+                                                   ARG_LAYOUT  => LAYOUT_EAST_WEST})
 
-        field_panel = get_layout.add_max_panel({ ARG_SECTION => LAYOUT_EAST})
+        label_panel = content_panel.add_panel(LAYOUT_WEST)
+        label_panel.get_layout.add_text("First Name", { ARG_TEXT_ALIGN => TEXT_ALIGN_RIGHT})
+        label_panel.get_layout.add_text("Middle Name", { ARG_TEXT_ALIGN => TEXT_ALIGN_RIGHT})
+        label_panel.get_layout.add_text("Last Name", { ARG_TEXT_ALIGN => TEXT_ALIGN_RIGHT})
+
+        field_panel = content_panel.add_panel(LAYOUT_EAST)
         field_panel.get_layout.add_text("John")
         field_panel.get_layout.add_text("Michael")
         field_panel.get_layout.add_text("Doe")

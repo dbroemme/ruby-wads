@@ -208,17 +208,14 @@ class ThemeTestDisplay < Widget
 
         field_panel = content_panel.add_panel(SECTION_EAST)
         @first_name = field_panel.get_layout.add_text_input(200, "")
-        field_panel.get_layout.add_text("Michael")
-        field_panel.get_layout.add_text("Doe")
+        @middle_name = field_panel.get_layout.add_text_input(200, "")
+        @last_name = field_panel.get_layout.add_text_input(200, "")
 
+        footer_panel = get_layout.add_max_panel({ ARG_SECTION => SECTION_FOOTER})
+        footer_panel.get_layout.add_button("Display Full Name", {ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER}) do
+            footer_panel.get_layout.add_text("The full name is #{@first_name.text} #{@middle_name.text} #{@last_name.text}.")
+        end
     end
-
-    def handle_mouse_down mouse_x, mouse_y
-        # Mouse click: Select text field based on mouse position.
-        WadsConfig.instance.get_window.text_input = [@first_name].find { |tf| tf.under_point?(mouse_x, mouse_y) }
-        # Advanced: Move caret to clicked position
-        WadsConfig.instance.get_window.text_input.move_caret(mouse_x) unless WadsConfig.instance.get_window.text_input.nil?
-    end 
 end
 
 ThemeTestApp.new.show

@@ -555,6 +555,7 @@ module Wads
             new_text_input = TextField.new(coordinates.x, coordinates.y, default_text, width)
             new_text_input.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_text_input)
+            @parent_widget.text_input_fields << new_text_input
             new_text_input
         end 
 
@@ -934,6 +935,7 @@ module Wads
         attr_accessor :overlay_widget
         attr_accessor :override_color
         attr_accessor :is_selected
+        attr_accessor :text_input_fields
 
         def initialize(x, y, width = 10, height = 10, layout = nil, theme = nil) 
             set_absolute_position(x, y)  
@@ -956,6 +958,7 @@ module Wads
             @show_background = true
             @show_border = true 
             @is_selected = false
+            @text_input_fields = []
         end
 
         def debug(message)
@@ -1318,6 +1321,12 @@ module Wads
             end
 
             if id == Gosu::MsLeft
+                # Special handling for text input fields
+                # Mouse click: Select text field based on mouse position.
+                WadsConfig.instance.get_window.text_input = @text_input_fields.find { |tf| tf.under_point?(mouse_x, mouse_y) }
+                # Advanced: Move caret to clicked position
+                WadsConfig.instance.get_window.text_input.move_caret(mouse_x) unless WadsConfig.instance.get_window.text_input.nil?
+
                 result = handle_mouse_down mouse_x, mouse_y
             elsif id == Gosu::MsRight
                 result = handle_right_mouse mouse_x, mouse_y

@@ -15,6 +15,7 @@ module Wads
             @update_count = 0
             WadsConfig.instance.set_window(self)
             set_display(widget) 
+            WadsConfig.instance.set_log_level("info")
         end 
 
         #

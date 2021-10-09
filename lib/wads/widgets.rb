@@ -74,6 +74,7 @@ module Wads
     ARG_COLOR = "color"
     ARG_DESIRED_WIDTH = "desired_width"
     ARG_DESIRED_HEIGHT = "desired_height"
+    ARG_PANEL_WIDTH = "panel_width"
     ARG_LAYOUT = "layout"
     ARG_TEXT_ALIGN = "text_align"
     ARG_USE_LARGE_FONT = "large_font"
@@ -161,6 +162,10 @@ module Wads
         def pixel_width_for_string(str)
             @font.text_width(str)
         end
+
+        def pixel_width_for_large_font(str)
+            @font_large.text_width(str)
+        end
     end
 
     #
@@ -176,6 +181,71 @@ module Wads
                   true,                       # use icons
                   Gosu::Font.new(22),         # regular font
                   Gosu::Font.new(38))         # large font
+        end 
+    end
+
+    class WadsDarkRedBrownTheme < GuiTheme 
+        def initialize 
+            super(COLOR_WHITE,                  # text color
+                  Gosu::Color.argb(0xffD63D41), # graphic elements - dark red
+                  Gosu::Color.argb(0xffEC5633), # border color - dark orange
+                  Gosu::Color.argb(0xff52373B), # background - dark brown
+                  Gosu::Color.argb(0xffEC5633), # selected item - dark orange
+                  true,                         # use icons
+                  Gosu::Font.new(22),           # regular font
+                  Gosu::Font.new(38))           # large font
+        end 
+    end
+
+    class WadsEarthTonesTheme < GuiTheme 
+        def initialize 
+            super(COLOR_WHITE,                  # text color
+                  Gosu::Color.argb(0xffD0605E), # graphic elements
+                  Gosu::Color.argb(0xffFF994C), # border color
+                  Gosu::Color.argb(0xff98506D), # background
+                  Gosu::Color.argb(0xffFF994C), # selected item
+                  true,                         # use icons
+                  Gosu::Font.new(22),           # regular font
+                  Gosu::Font.new(38))           # large font
+        end 
+    end
+
+    class WadsNatureTheme < GuiTheme 
+        def initialize 
+            super(COLOR_WHITE,                  # text color
+                  Gosu::Color.argb(0xffA9B40B), # graphic elements
+                  Gosu::Color.argb(0xffF38B01), # border color
+                  Gosu::Color.argb(0xffFFC001), # background
+                  Gosu::Color.argb(0xffF38B01), # selected item
+                  true,                         # use icons
+                  Gosu::Font.new(22, { :bold => true}), # regular font
+                  Gosu::Font.new(38, { :bold => true})) # large font
+        end 
+    end
+
+    class WadsPurpleTheme < GuiTheme 
+        def initialize 
+            super(COLOR_WHITE,                  # text color
+                  Gosu::Color.argb(0xff5A23B4), # graphic elements
+                  Gosu::Color.argb(0xffFE01EA), # border color
+                  Gosu::Color.argb(0xffAA01FF), # background
+                  Gosu::Color.argb(0xffFE01EA), # selected item
+                  true,                         # use icons
+                  Gosu::Font.new(22), # regular font
+                  Gosu::Font.new(38, { :bold => true})) # large font
+        end 
+    end
+
+    class WadsAquaTheme < GuiTheme 
+        def initialize 
+            super(COLOR_WHITE,                  # text color
+                  Gosu::Color.argb(0xff387CA3), # graphic elements
+                  Gosu::Color.argb(0xff387CA3), # border color
+                  Gosu::Color.argb(0xff52ADC8), # background
+                  Gosu::Color.argb(0xff55C39E), # selected item
+                  true,                         # use icons
+                  Gosu::Font.new(22), # regular font
+                  Gosu::Font.new(38, { :bold => true})) # large font
         end 
     end
 
@@ -538,7 +608,11 @@ module Wads
 
         def add_text(message, args = {})
             default_dimensions = WadsConfig.instance.default_dimensions(ELEMENT_TEXT)
-            text_width = WadsConfig.instance.current_theme.pixel_width_for_string(message)
+            if args[ARG_USE_LARGE_FONT]
+                text_width = WadsConfig.instance.current_theme.pixel_width_for_large_font(message)
+            else
+                text_width = WadsConfig.instance.current_theme.pixel_width_for_string(message)
+            end
             coordinates = get_coordinates(ELEMENT_TEXT,
                 { ARG_DESIRED_WIDTH => text_width,
                   ARG_DESIRED_HEIGHT => default_dimensions[1]}.merge(args))
@@ -812,8 +886,8 @@ module Wads
         def initialize(x, y, width, height, parent_widget, args = {})
             super
             west_section_width = width / 2
-            if args[ARG_DESIRED_WIDTH]
-                west_section_width = args[ARG_DESIRED_WIDTH]
+            if args[ARG_PANEL_WIDTH]
+                west_section_width = args[ARG_PANEL_WIDTH]
             end
             east_section_width = width - west_section_width
             @container_map[SECTION_WEST] = GuiContainer.new(x, y,
@@ -1003,7 +1077,8 @@ module Wads
         end
 
         def add_panel(section, args = {})
-            get_layout.add_max_panel({ ARG_SECTION => section}.merge(args))
+            get_layout.add_max_panel({ ARG_SECTION => section,
+                                       ARG_THEME => @gui_theme}.merge(args))
         end
 
         def get_theme 
@@ -1034,6 +1109,14 @@ module Wads
                 return @override_color 
             end 
             @gui_theme.text_color 
+        end 
+
+        def selection_color 
+            @gui_theme.selection_color 
+        end 
+
+        def border_color 
+            @gui_theme.border_color 
         end 
 
         #
@@ -1920,10 +2003,13 @@ module Wads
     end 
 
     class InfoBox < Widget 
-        def initialize(x, y, width, height, title, content) 
+        def initialize(x, y, width, height, title, content, args = {}) 
             super(x, y) 
             set_dimensions(width, height)
             @base_z = 10
+            if args[ARG_THEME]
+                @gui_theme = args[ARG_THEME]
+            end
             add_text(title, 5, 5)
             add_document(content, 5, 52, width, height - 52)
             ok_button = add_button("OK", (@width / 2) - 50, height - 26) do
@@ -2267,11 +2353,11 @@ module Wads
 
             # Draw the header row
             y = @y
-            Gosu::draw_rect(@x + 1, y, @width - 3, 28, @gui_theme.text_color, relative_z_order(Z_ORDER_SELECTION_BACKGROUND)) 
+            Gosu::draw_rect(@x + 1, y, @width - 3, 28, graphics_color, relative_z_order(Z_ORDER_SELECTION_BACKGROUND)) 
 
             x = @x + 20
             (0..number_of_columns-1).each do |c| 
-                @gui_theme.font.draw_text(@headers[c], x, y, z_order, 1, 1, get_theme.background_color)
+                @gui_theme.font.draw_text(@headers[c], x, y + 3, z_order, 1, 1, text_color)
                 x = x + column_widths[c] + 20
             end
             y = y + 30

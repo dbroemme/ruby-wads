@@ -38,6 +38,8 @@ class ThemeTestDisplay < Widget
             render_plot
         elsif ARGV[0] == "form"
             render_form
+        elsif ARGV[0] == "overlay"
+            render_overlay
         else 
             puts "Argument #{ARGV[0]} is invalid."
             display_help 
@@ -54,6 +56,7 @@ class ThemeTestDisplay < Widget
         puts "  eastwest   show EastWestLayout"
         puts "  plot       show a simple plot using HeaderContentLayout"
         puts "  form       test a form"
+        puts "  overlay    show an overlay widget"
         exit
     end 
 
@@ -88,10 +91,13 @@ class ThemeTestDisplay < Widget
         set_layout(LAYOUT_HEADER_CONTENT)
 
         header = get_layout.add_max_panel({ ARG_SECTION => SECTION_HEADER,
-                                            ARG_THEME => WadsBrightTheme.new })
-        header.get_layout.add_text("I am the header section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
+                                            ARG_THEME => WadsNatureTheme.new })
+        header.get_layout.add_text("I am the header section",
+                                   { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER,
+                                     ARG_USE_LARGE_FONT => true})
 
-        main = get_layout.add_max_panel({ ARG_SECTION => SECTION_CONTENT})
+        main = get_layout.add_max_panel({ ARG_SECTION => SECTION_CONTENT,
+                                          ARG_THEME => WadsNatureTheme.new })
         main.get_layout.add_document(sample_content)
         table = main.get_layout.add_multi_select_table(["A", "B", "C"], 4, { ARG_SECTION => SECTION_WEST})
         table.add_row(["Key1", "Value1", "ValueD"])
@@ -199,7 +205,8 @@ class ThemeTestDisplay < Widget
         set_layout(LAYOUT_CONTENT_FOOTER)
 
         content_panel = get_layout.add_max_panel({ ARG_SECTION => SECTION_CONTENT,
-                                                   ARG_LAYOUT  => LAYOUT_EAST_WEST})
+                                                   ARG_LAYOUT  => LAYOUT_EAST_WEST,
+                                                   ARG_PANEL_WIDTH => 200 })
 
         label_panel = content_panel.add_panel(SECTION_WEST)
         label_panel.get_layout.add_text("First Name", { ARG_TEXT_ALIGN => TEXT_ALIGN_RIGHT})
@@ -207,14 +214,42 @@ class ThemeTestDisplay < Widget
         label_panel.get_layout.add_text("Last Name", { ARG_TEXT_ALIGN => TEXT_ALIGN_RIGHT})
 
         field_panel = content_panel.add_panel(SECTION_EAST)
-        @first_name = field_panel.get_layout.add_text_input(200, "")
-        @middle_name = field_panel.get_layout.add_text_input(200, "")
-        @last_name = field_panel.get_layout.add_text_input(200, "")
+        @first_name = field_panel.get_layout.add_text_input(200)
+        @middle_name = field_panel.get_layout.add_text_input(200)
+        @last_name = field_panel.get_layout.add_text_input(200)
 
         footer_panel = get_layout.add_max_panel({ ARG_SECTION => SECTION_FOOTER})
         footer_panel.get_layout.add_button("Display Full Name", {ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER}) do
             footer_panel.get_layout.add_text("The full name is #{@first_name.text} #{@middle_name.text} #{@last_name.text}.")
         end
+    end
+
+    def render_overlay
+        set_layout(LAYOUT_HEADER_CONTENT)
+
+        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_HEADER})
+        header.get_layout.add_text("I am the header section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
+
+        main = get_layout.add_max_panel({ ARG_SECTION => SECTION_CONTENT})
+        main.get_layout.add_document(sample_content)
+
+        main.get_layout.add_button("Display InfoBox", {ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER}) do
+            add_overlay(create_overlay_widget)
+        end
+    end
+
+    def create_overlay_widget 
+        InfoBox.new(100, 60, 600, 400, "Sample Overlay", overlay_content, { ARG_THEME => WadsBrightTheme.new})
+    end
+
+    def overlay_content
+        <<~HEREDOC
+        This is a sample overlay widget which typically
+        you would use to display important information
+        upon request. The InfoBox widget is used for
+        this purpose.
+        HEREDOC
+
     end
 end
 

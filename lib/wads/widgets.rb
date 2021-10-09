@@ -1406,9 +1406,11 @@ module Wads
             if id == Gosu::MsLeft
                 # Special handling for text input fields
                 # Mouse click: Select text field based on mouse position.
-                WadsConfig.instance.get_window.text_input = @text_input_fields.find { |tf| tf.under_point?(mouse_x, mouse_y) }
-                # Advanced: Move caret to clicked position
-                WadsConfig.instance.get_window.text_input.move_caret(mouse_x) unless WadsConfig.instance.get_window.text_input.nil?
+                if not @text_input_fields.empty?
+                    WadsConfig.instance.get_window.text_input = @text_input_fields.find { |tf| tf.under_point?(mouse_x, mouse_y) }
+                    # Advanced: Move caret to clicked position
+                    WadsConfig.instance.get_window.text_input.move_caret(mouse_x) unless WadsConfig.instance.get_window.text_input.nil?
+                end
 
                 result = handle_mouse_down mouse_x, mouse_y
             elsif id == Gosu::MsRight

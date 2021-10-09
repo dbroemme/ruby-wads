@@ -68,13 +68,13 @@ class StocksDisplay < Widget
         super(0, 0, 800, 600)
         set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
 
-        image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => LAYOUT_TOP})
+        image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => SECTION_TOP})
         image.add_text("Wads Sample App", 10, 20, nil, true)
         image.add_text("Version #{Wads::VERSION}", 13, 54)
 
-        get_layout.add_document(sample_content, { ARG_SECTION => LAYOUT_CENTER})
+        get_layout.add_document(sample_content, { ARG_SECTION => SECTION_CENTER})
 
-        panel = get_layout.add_horizontal_panel({ ARG_SECTION => LAYOUT_BOTTOM})
+        panel = get_layout.add_horizontal_panel({ ARG_SECTION => SECTION_BOTTOM})
         panel.add_button("Exit", 0, panel.height - 30) do
             WidgetResult.new(true)
         end
@@ -82,7 +82,7 @@ class StocksDisplay < Widget
 
         @data_table = get_layout.add_single_select_table(         
                 ["Day", "Min", "Avg", "StdDev", "Max", "p10", "p90"], 5,
-                { ARG_SECTION => LAYOUT_CENTER})
+                { ARG_SECTION => SECTION_CENTER})
         Date::DAYNAMES[1..5].each do |day|
             min = format_percent(stats.min(day))
             avg = format_percent(stats.average(day))

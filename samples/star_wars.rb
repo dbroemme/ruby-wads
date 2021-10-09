@@ -56,13 +56,13 @@ class StarWarsDisplay < Widget
         set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
         @graph = graph
 
-        image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => LAYOUT_TOP})
+        image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => SECTION_TOP})
         image.add_text("Wads Sample App", 10, 20, nil, true)
         image.add_text("Version #{Wads::VERSION}", 13, 54)
 
-        get_layout.add_document(sample_content, { ARG_SECTION => LAYOUT_CENTER})
+        get_layout.add_document(sample_content, { ARG_SECTION => SECTION_CENTER})
 
-        panel = get_layout.add_horizontal_panel({ ARG_SECTION => LAYOUT_BOTTOM})
+        panel = get_layout.add_horizontal_panel({ ARG_SECTION => SECTION_BOTTOM})
         panel.add_button("Exit", 0, panel.height - 30) do
             WidgetResult.new(true)
         end
@@ -70,13 +70,13 @@ class StarWarsDisplay < Widget
         panel.disable_border
 
         @data_table = get_layout.add_single_select_table(
-            ["Character", "Number of Scenes"], 4, { ARG_SECTION => LAYOUT_CENTER})
+            ["Character", "Number of Scenes"], 4, { ARG_SECTION => SECTION_CENTER})
 
         @graph.node_list.each do |character|
             @data_table.add_row([character.name, character.value], character.get_tag(ARG_COLOR))
         end
         @graph_display = get_layout.add_graph_display(@graph, GRAPH_DISPLAY_EXPLORER,
-                                                      { ARG_SECTION => LAYOUT_CENTER})
+                                                      { ARG_SECTION => SECTION_CENTER})
 
         disable_border
     end

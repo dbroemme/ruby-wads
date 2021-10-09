@@ -51,11 +51,11 @@ class GraphDisplay < Widget
         set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
         @graph = graph
 
-        image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => LAYOUT_TOP})
+        image = get_layout.add_image("./media/Banner.png", { ARG_SECTION => SECTION_TOP})
         image.add_text("Wads Sample App", 10, 20, nil, true)
         image.add_text("Version #{Wads::VERSION}", 13, 54)
 
-        panel = get_layout.add_horizontal_panel({ ARG_SECTION => LAYOUT_BOTTOM})
+        panel = get_layout.add_horizontal_panel({ ARG_SECTION => SECTION_BOTTOM})
         panel.add_button("Exit", 0, panel.height - 30) do
             WidgetResult.new(true)
         end
@@ -63,7 +63,7 @@ class GraphDisplay < Widget
         panel.disable_border
 
         @graph_display = get_layout.add_graph_display(@graph, GRAPH_DISPLAY_EXPLORER,
-                                                      { ARG_SECTION => LAYOUT_CENTER})
+                                                      { ARG_SECTION => SECTION_CENTER})
         disable_border
     end 
 end

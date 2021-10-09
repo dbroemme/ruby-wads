@@ -58,6 +58,7 @@ module Wads
     IMAGE_CIRCLE_SIZE = 104
 
     ELEMENT_TEXT = "text"
+    ELEMENT_TEXT_INPUT = "text_input"
     ELEMENT_BUTTON = "button"
     ELEMENT_IMAGE = "image"
     ELEMENT_TABLE = "table"
@@ -75,6 +76,8 @@ module Wads
     ARG_DESIRED_HEIGHT = "desired_height"
     ARG_LAYOUT = "layout"
     ARG_TEXT_ALIGN = "text_align"
+    ARG_USE_LARGE_FONT = "large_font"
+    ARG_THEME = "theme"
 
     TEXT_ALIGN_LEFT = "left"
     TEXT_ALIGN_CENTER = "center"
@@ -223,7 +226,7 @@ module Wads
 
         def get_window
             if @window.nil?
-                raise "The WadsConfig.instance.set_window(window) needs to be invoked from your Gosu app"
+                raise "The WadsConfig.instance.set_window(window) needs to be invoked first"
             end
             @window 
         end
@@ -275,6 +278,7 @@ module Wads
             if @default_dimensions.nil? 
                 @default_dimensions = {}
                 @default_dimensions[ELEMENT_TEXT] = [100, 20]
+                @default_dimensions[ELEMENT_TEXT_INPUT] = [100, 20]
                 @default_dimensions[ELEMENT_IMAGE] = [100, 100]
                 @default_dimensions[ELEMENT_TABLE] = ["max", "max"]
                 @default_dimensions[ELEMENT_HORIZONTAL_PANEL] = ["max", 100]
@@ -411,16 +415,6 @@ module Wads
         end 
 
         def get_coordinates(element_type, args = {})
-            # We would need to remember the original start x, y to do this
-            # and then compare the next x y with the start x y plus max width or height
-            # You would check at the beginning of the method
-            #if elem.right_edge > max_width 
-            #    raise "Cannot fit next element in container, x value is #{elem.right_edge}"
-            #end
-            #if elem.bottom_edge > max_height 
-            #    raise "Cannot fit next element in container, y value is #{elem.bottom_edge}"
-            #end
-
             default_dim =  WadsConfig.instance.default_dimensions(element_type)
             if default_dim.nil?
                 raise "#{element_type} is an undefined element type"
@@ -548,10 +542,20 @@ module Wads
             coordinates = get_coordinates(ELEMENT_TEXT,
                 { ARG_DESIRED_WIDTH => text_width,
                   ARG_DESIRED_HEIGHT => default_dimensions[1]}.merge(args))
-            new_text = Text.new(coordinates.x, coordinates.y, message, args[ARG_COLOR])
+            new_text = Text.new(coordinates.x, coordinates.y, message,
+                { ARG_THEME => @parent_widget.gui_theme}.merge(args))
             new_text.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_text)
             new_text
+        end 
+
+        def add_text_input(width, default_text = '', args = {})
+            coordinates = get_coordinates(ELEMENT_TEXT_INPUT,
+                { ARG_DESIRED_WIDTH => width}.merge(args))
+            new_text_input = TextField.new(coordinates.x, coordinates.y, default_text, width)
+            new_text_input.base_z = @parent_widget.base_z
+            @parent_widget.add_child(new_text_input)
+            new_text_input
         end 
 
         def add_image(filename, args = {})
@@ -559,7 +563,8 @@ module Wads
             coordinates = get_coordinates(ELEMENT_IMAGE,
                 { ARG_DESIRED_WIDTH => img.width,
                   ARG_DESIRED_HEIGHT => img.height}.merge(args))
-            new_image = ImageWidget.new(coordinates.x, coordinates.y, img)
+            new_image = ImageWidget.new(coordinates.x, coordinates.y, img,
+                                        {ARG_THEME => @parent_widget.gui_theme}.merge(args))
             new_image.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_image)
             new_image
@@ -568,8 +573,10 @@ module Wads
         def add_button(label, args = {}, &block)
             text_width = WadsConfig.instance.current_theme.pixel_width_for_string(label) + 20
             coordinates = get_coordinates(ELEMENT_BUTTON,
-                { ARG_DESIRED_WIDTH => text_width,}.merge(args))
-            new_button = Button.new(coordinates.x, coordinates.y, label, coordinates.width)
+                { ARG_DESIRED_WIDTH => text_width}.merge(args))
+            new_button = Button.new(coordinates.x, coordinates.y, label, 
+                                    { ARG_DESIRED_WIDTH => coordinates.width,
+                                      ARG_THEME => @parent_widget.gui_theme}.merge(args))
             new_button.set_action(&block)
             new_button.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_button)
@@ -592,7 +599,8 @@ module Wads
                 { ARG_DESIRED_HEIGHT => height}.merge(args))
             new_doc = Document.new(coordinates.x, coordinates.y,
                                    coordinates.width, coordinates.height,
-                                   content)
+                                   content,
+                                   {ARG_THEME => @parent_widget.gui_theme}.merge(args))
             new_doc.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_doc)
             new_doc
@@ -614,7 +622,8 @@ module Wads
                 { ARG_DESIRED_HEIGHT => calculated_height}.merge(args))
             new_table = SingleSelectTable.new(coordinates.x, coordinates.y,
                                               coordinates.width, coordinates.height,
-                                              column_headers, visible_rows)
+                                              column_headers, visible_rows,
+                                              {ARG_THEME => @parent_widget.gui_theme}.merge(args))
             new_table.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_table)
             new_table
@@ -626,7 +635,8 @@ module Wads
                 { ARG_DESIRED_HEIGHT => calculated_height}.merge(args))
             new_table = MultiSelectTable.new(coordinates.x, coordinates.y,
                                              coordinates.width, coordinates.height,
-                                             column_headers, visible_rows)
+                                             column_headers, visible_rows,
+                                             {ARG_THEME => @parent_widget.gui_theme}.merge(args))
             new_table.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_table)
             new_table
@@ -638,7 +648,8 @@ module Wads
                 { ARG_DESIRED_HEIGHT => calculated_height}.merge(args))
             new_table = Table.new(coordinates.x, coordinates.y,
                                 coordinates.width, coordinates.height,
-                                column_headers, visible_rows)
+                                column_headers, visible_rows,
+                                {ARG_THEME => @parent_widget.gui_theme}.merge(args))
             new_table.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_table)
             new_table
@@ -665,9 +676,13 @@ module Wads
                 new_panel_layout = LAYOUT_VERTICAL_COLUMN
             end
             new_panel.set_layout(new_panel_layout, args)
+
+            new_panel_theme = args[ARG_THEME]
+            new_panel.gui_theme = new_panel_theme unless new_panel_theme.nil?
+
             new_panel.base_z = @parent_widget.base_z
             @parent_widget.add_child(new_panel)
-            new_panel.disable_border
+            #new_panel.disable_border
             new_panel
         end
     end 
@@ -743,7 +758,7 @@ module Wads
     #   +                  SECTION_NORTH                  +
     #   +-------------------------------------------------+
     #   +                                                 +
-    #   +                  SECTION_CENTER                  +
+    #   +                  SECTION_CENTER                 +
     #   +                                                 +
     #   +-------------------------------------------------+
     class HeaderContentLayout < SectionLayout
@@ -762,10 +777,10 @@ module Wads
     #
     #   +-------------------------------------------------+
     #   +                                                 +
-    #   +                  SECTION_CENTER                  +
+    #   +                  SECTION_CENTER                 +
     #   +                                                 +
     #   +-------------------------------------------------+
-    #   +                  SECTION_SOUTH                   +
+    #   +                  SECTION_SOUTH                  +
     #   +-------------------------------------------------+
     class ContentFooterLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
@@ -778,7 +793,7 @@ module Wads
             end
             bottom_section_y_start = y + height - bottom_section_height
             middle_section_height = height - bottom_section_height
-            @container_map[LAYOUT_CENTER] = GuiContainer.new(x, y, width, middle_section_height, FILL_VERTICAL_STACK)
+            @container_map[SECTION_CENTER] = GuiContainer.new(x, y, width, middle_section_height, FILL_VERTICAL_STACK)
             @container_map[SECTION_SOUTH] = GuiContainer.new(x, bottom_section_y_start,
                                                             width, bottom_section_height)
         end
@@ -788,7 +803,7 @@ module Wads
     #
     #   +-------------------------------------------------+
     #   +                        |                        +
-    #   +     SECTION_WEST        |     SECTION_EAST        +
+    #   +     SECTION_WEST       |      SECTION_EAST      +
     #   +                        |                        +
     #   +-------------------------------------------------+
     #
@@ -812,13 +827,13 @@ module Wads
     # The layout sections are as follows:
     #
     #   +-------------------------------------------------+
-    #   +                  SECTION_NORTH                   +
+    #   +                  SECTION_NORTH                  +
     #   +-------------------------------------------------+
     #   +                                                 +
-    #   +                  SECTION_CENTER                  +
+    #   +                  SECTION_CENTER                 +
     #   +                                                 +
     #   +-------------------------------------------------+
-    #   +                  SECTION_SOUTH                   +
+    #   +                  SECTION_SOUTH                  +
     #   +-------------------------------------------------+
     class TopMiddleBottomLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
@@ -838,13 +853,13 @@ module Wads
     # The layout sections are as follows:
     #
     #   +-------------------------------------------------+
-    #   +                  SECTION_NORTH                   +
+    #   +                  SECTION_NORTH                  +
     #   +-------------------------------------------------+
-    #   +             |                     |             +
-    #   + SECTION_WEST |    SECTION_CENTER    | SECTION_EAST +
-    #   +             |                     |             +
+    #   +              |                   |              +
+    #   + SECTION_WEST |   SECTION_CENTER  | SECTION_EAST +
+    #   +              |                   |              +
     #   +-------------------------------------------------+
-    #   +                  SECTION_SOUTH                   +
+    #   +                  SECTION_SOUTH                  +
     #   +-------------------------------------------------+
     class BorderLayout < SectionLayout
         def initialize(x, y, width, height, parent_widget, args = {})
@@ -899,23 +914,6 @@ module Wads
     # to specifically call draw or render on any children. If you want to manage GUI
     # elements outside of the widget hierarchy, then render is the best place to do it.
     #
-    #   def draw 
-    #     if @visible 
-    #       render
-    #       if @is_selected
-    #         draw_background(Z_ORDER_SELECTION_BACKGROUND, @gui_theme.selection_color)
-    #       elsif @show_background
-    #         draw_background
-    #       end
-    #       if @show_border
-    #         draw_border
-    #       end
-    #       @children.each do |child| 
-    #         child.draw 
-    #       end 
-    #     end 
-    #   end
-    #
     # Likewise, the update method recursively calls the handle_update method on all
     # children in this widget's hierarchy.
     #
@@ -937,7 +935,7 @@ module Wads
         attr_accessor :override_color
         attr_accessor :is_selected
 
-        def initialize(x, y, width = 10, height = 10, layout = nil) 
+        def initialize(x, y, width = 10, height = 10, layout = nil, theme = nil) 
             set_absolute_position(x, y)  
             set_dimensions(width, height)
             @base_z = 0
@@ -948,7 +946,11 @@ module Wads
                     @layout = layout
                 end
             end
-            @gui_theme = WadsConfig.instance.current_theme
+            if theme.nil?
+                @gui_theme = WadsConfig.instance.current_theme
+            else 
+                @gui_theme = theme 
+            end
             @visible = true 
             @children = []
             @show_background = true
@@ -1406,8 +1408,10 @@ module Wads
         # Add a child text widget using x, y positioning relative to this widget
         #
         def add_text(message, rel_x, rel_y, color = nil, use_large_font = false)
-            new_text = Text.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), message, color, use_large_font)
+            new_text = Text.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), message,
+                                                  { ARG_COLOR => color, ARG_USE_LARGE_FONT => use_large_font})
             new_text.base_z = @base_z
+            new_text.gui_theme = @gui_theme
             add_child(new_text)
             new_text
         end 
@@ -1420,6 +1424,7 @@ module Wads
                                    width, height,
                                    content)
             new_doc.base_z = @base_z
+            new_doc.gui_theme = @gui_theme
             add_child(new_doc)
             new_doc
         end
@@ -1433,9 +1438,15 @@ module Wads
         #     puts "User hit the test button"
         #   end
         def add_button(label, rel_x, rel_y, width = nil, &block)
-            new_button = Button.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), label, width)
+            if width.nil?
+                args = {}
+            else 
+                args = { ARG_DESIRED_WIDTH => width }
+            end
+            new_button = Button.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), label, args)
             new_button.set_action(&block)
             new_button.base_z = @base_z
+            new_button.gui_theme = @gui_theme
             add_child(new_button)
             new_button
         end
@@ -1448,6 +1459,7 @@ module Wads
             new_delete_button = DeleteButton.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y))
             new_delete_button.set_action(&block)
             new_delete_button.base_z = @base_z
+            new_delete_button.gui_theme = @gui_theme
             add_child(new_delete_button)
             new_delete_button 
         end
@@ -1459,6 +1471,7 @@ module Wads
             new_table = Table.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                               width, height, column_headers, max_visible_rows)
             new_table.base_z = @base_z
+            new_table.gui_theme = @gui_theme
             add_child(new_table)
             new_table
         end 
@@ -1471,6 +1484,7 @@ module Wads
             new_table = SingleSelectTable.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                               width, height, column_headers, max_visible_rows)
             new_table.base_z = @base_z
+            new_table.gui_theme = @gui_theme
             add_child(new_table)
             new_table
         end 
@@ -1483,6 +1497,7 @@ module Wads
             new_table = MultiSelectTable.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y),
                               width, height, column_headers, max_visible_rows)
             new_table.base_z = @base_z
+            new_table.gui_theme = @gui_theme
             add_child(new_table)
             new_table
         end 
@@ -1503,6 +1518,7 @@ module Wads
         def add_plot(rel_x, rel_y, width, height)
             new_plot = Plot.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height) 
             new_plot.base_z = @base_z
+            new_plot.gui_theme = @gui_theme
             add_child(new_plot)
             new_plot
         end
@@ -1513,6 +1529,7 @@ module Wads
         def add_axis_lines(rel_x, rel_y, width, height)
             new_axis_lines = AxisLines.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), width, height) 
             new_axis_lines.base_z = @base_z
+            new_axis_lines.gui_theme = @gui_theme
             add_child(new_axis_lines)
             new_axis_lines
         end
@@ -1523,6 +1540,7 @@ module Wads
         def add_image(filename, rel_x, rel_y)
             new_image = ImageWidget.new(x_pixel_to_screen(rel_x), y_pixel_to_screen(rel_y), img)
             new_image.base_z = @base_z
+            new_image.gui_theme = @gui_theme
             add_child(new_image)
             new_image
         end
@@ -1632,8 +1650,8 @@ module Wads
     # apply a specific layout to a sub-section of the screen.
     #
     class Panel < Widget
-        def initialize(x, y, w, h, layout = nil) 
-            super(x, y, w, h, layout)
+        def initialize(x, y, w, h, layout = nil, theme = nil) 
+            super(x, y, w, h, layout, theme)
         end
     end 
 
@@ -1646,7 +1664,7 @@ module Wads
         attr_accessor :img 
         attr_accessor :scale
 
-        def initialize(x, y, image) 
+        def initialize(x, y, image, args = {}) 
             super(x, y)
             if image.is_a? String
                 @img = Gosu::Image.new(image)
@@ -1654,6 +1672,9 @@ module Wads
                 @img = image 
             else 
                 raise "ImageWidget requires either a filename or a Gosu::Image object"
+            end
+            if args[ARG_THEME]
+                @gui_theme = args[ARG_THEME]
             end
             @scale = 1
             disable_border
@@ -1679,11 +1700,18 @@ module Wads
     class Text < Widget
         attr_accessor :label
 
-        def initialize(x, y, label, color = nil, use_large_font = false) 
+        def initialize(x, y, label, args = {}) 
             super(x, y) 
             @label = label
-            @use_large_font = use_large_font
-            @override_color = color
+            if args[ARG_THEME]
+                @gui_theme = args[ARG_THEME]
+            end
+            if args[ARG_USE_LARGE_FONT]
+                @use_large_font = args[ARG_USE_LARGE_FONT] 
+            end
+            if args[ARG_COLOR]
+                @override_color = args[ARG_COLOR]
+            end
             disable_border
             if @use_large_font 
                 set_dimensions(@gui_theme.font_large.text_width(@label) + 10, 20)
@@ -1784,14 +1812,17 @@ module Wads
         attr_accessor :is_pressed
         attr_accessor :action_code
 
-        def initialize(x, y, label, width = nil) 
+        def initialize(x, y, label, args = {}) 
             super(x, y) 
             @label = label
+            if args[ARG_THEME]
+                @gui_theme = args[ARG_THEME]
+            end
             @text_pixel_width = @gui_theme.font.text_width(@label)
-            if width.nil?
-                @width = @text_pixel_width + 10
+            if args[ARG_DESIRED_WIDTH]
+                @width = args[ARG_DESIRED_WIDTH] 
             else 
-                @width = width 
+                @width = @text_pixel_width + 10
             end
             @height = 26
             @is_pressed = false
@@ -1838,8 +1869,8 @@ module Wads
     # A subclass of button that renders a red X instead of label text
     #
     class DeleteButton < Button
-        def initialize(x, y) 
-            super(x, y, "ignore", 50)
+        def initialize(x, y, args = {}) 
+            super(x, y, "ignore", {ARG_DESIRED_WIDTH => 50}.merge(args))
             set_dimensions(14, 14)
             add_child(Line.new(@x, @y, right_edge, bottom_edge, COLOR_ERROR_CODE_RED))
             add_child(Line.new(@x, bottom_edge, right_edge, @y, COLOR_ERROR_CODE_RED))
@@ -1856,11 +1887,14 @@ module Wads
     class Document < Widget
         attr_accessor :lines
 
-        def initialize(x, y, width, height, content) 
+        def initialize(x, y, width, height, content, args = {}) 
             super(x, y)
             set_dimensions(width, height)
             @lines = content.split("\n")
             disable_border
+            if args[ARG_THEME]
+                @gui_theme = args[ARG_THEME]
+            end
         end
 
         def render 
@@ -2116,9 +2150,12 @@ module Wads
         attr_accessor :current_row
         attr_accessor :can_delete_rows
 
-        def initialize(x, y, width, height, headers, max_visible_rows = 10) 
+        def initialize(x, y, width, height, headers, max_visible_rows = 10, args = {}) 
             super(x, y)
             set_dimensions(width, height)
+            if args[ARG_THEME]
+                @gui_theme = args[ARG_THEME]
+            end
             @headers = headers
             @current_row = 0
             @max_visible_rows = max_visible_rows
@@ -2210,6 +2247,7 @@ module Wads
                 column_widths[c] = max_length
             end
 
+            # Draw a horizontal line between header and data rows
             x = @x + 10
             if number_of_columns > 1
                 (0..number_of_columns-2).each do |c| 
@@ -2218,10 +2256,13 @@ module Wads
                 end 
             end
 
-            y = @y             
+            # Draw the header row
+            y = @y
+            Gosu::draw_rect(@x + 1, y, @width - 3, 28, @gui_theme.text_color, relative_z_order(Z_ORDER_SELECTION_BACKGROUND)) 
+
             x = @x + 20
             (0..number_of_columns-1).each do |c| 
-                @gui_theme.font.draw_text(@headers[c], x, y, z_order, 1, 1, text_color)
+                @gui_theme.font.draw_text(@headers[c], x, y, z_order, 1, 1, get_theme.background_color)
                 x = x + column_widths[c] + 20
             end
             y = y + 30
@@ -2268,8 +2309,8 @@ module Wads
     class SingleSelectTable < Table
         attr_accessor :selected_row
 
-        def initialize(x, y, width, height, headers, max_visible_rows = 10) 
-            super(x, y, width, height, headers, max_visible_rows) 
+        def initialize(x, y, width, height, headers, max_visible_rows = 10, args = {}) 
+            super(x, y, width, height, headers, max_visible_rows, args) 
         end 
 
         def is_row_selected(mouse_y)
@@ -2360,8 +2401,8 @@ module Wads
     class MultiSelectTable < Table
         attr_accessor :selected_rows
 
-        def initialize(x, y, width, height, headers, max_visible_rows = 10) 
-            super(x, y, width, height, headers, max_visible_rows) 
+        def initialize(x, y, width, height, headers, max_visible_rows = 10, args = {}) 
+            super(x, y, width, height, headers, max_visible_rows, args) 
             @selected_rows = []
         end
     

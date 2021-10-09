@@ -79,29 +79,30 @@ class ThemeTestDisplay < Widget
         table.add_row(["These", "are", "values in row 4"])
 
         panel = get_layout.add_horizontal_panel({ ARG_SECTION => SECTION_BOTTOM})
-        panel.add_button("Exit", 0, panel.height - 30) do
+        panel.add_button("Exit", 380, panel.height - 30) do
             WidgetResult.new(true)
         end
-        panel.center_children
     end
 
     def render_header_layout
         set_layout(LAYOUT_HEADER_CONTENT)
 
-        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_HEADER})
-        header.set_theme(WadsBrightTheme.new)
+        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_HEADER,
+                                            ARG_THEME => WadsBrightTheme.new })
         header.get_layout.add_text("I am the header section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
 
-        get_layout.add_document(sample_content, { ARG_SECTION => SECTION_CONTENT})
+        main = get_layout.add_max_panel({ ARG_SECTION => SECTION_CONTENT})
+        main.get_layout.add_document(sample_content)
+        table = main.get_layout.add_multi_select_table(["A", "B", "C"], 4, { ARG_SECTION => SECTION_WEST})
+        table.add_row(["Key1", "Value1", "ValueD"])
+        table.add_row(["Key2", "Value2", "ValueE"])
+        table.add_row(["Key3", "Value3", "ValueF"])
     end
 
     def render_border_layout
         set_layout(LAYOUT_BORDER)
         header = get_layout.add_max_panel({ ARG_SECTION => SECTION_NORTH})
-        # The zero x coord doesn't matter here because we center it below
-        # Centering only adjusts the x coordinate
-        header.add_text("I am the header section", 0, 35)
-        header.center_children
+        header.get_layout.add_text("I am the header section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
 
         west = get_layout.add_vertical_panel({ ARG_SECTION => SECTION_WEST})
         west.get_layout.add_button("Do stuff") do 
@@ -118,27 +119,18 @@ class ThemeTestDisplay < Widget
         east.get_layout.add_text("item2")
 
         footer = get_layout.add_max_panel({ ARG_SECTION => SECTION_SOUTH})
-        # The zero x coord doesn't matter here because we center it below
-        # Centering only adjusts the x coordinate
-        footer.add_text("I am the footer section", 0, 35)
-        footer.center_children
+        footer.get_layout.add_text("I am the footer section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
     end
 
     def render_top_middle_bottom_layout
         set_layout(LAYOUT_TOP_MIDDLE_BOTTOM)
         header = get_layout.add_max_panel({ ARG_SECTION => SECTION_TOP})
-        # The zero x coord doesn't matter here because we center it below
-        # Centering only adjusts the x coordinate
-        header.add_text("I am the header section", 0, 35)
-        header.center_children
+        header.get_layout.add_text("I am the header section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
 
         get_layout.add_document(sample_content, { ARG_SECTION => SECTION_MIDDLE})
 
         footer = get_layout.add_max_panel({ ARG_SECTION => SECTION_BOTTOM})
-        # The zero x coord doesn't matter here because we center it below
-        # Centering only adjusts the x coordinate
-        footer.add_text("I am the footer section", 0, 35)
-        footer.center_children
+        footer.get_layout.add_text("I am the footer section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
     end
 
     def sample_content
@@ -155,11 +147,9 @@ class ThemeTestDisplay < Widget
 
         get_layout.add_document(sample_content, { ARG_SECTION => SECTION_CONTENT})
 
-        footer = get_layout.add_max_panel({ ARG_SECTION => SECTION_FOOTER})
-        # The zero x coord doesn't matter here because we center it below
-        # Centering only adjusts the x coordinate
-        footer.add_text("I am the footer section", 0, 35)
-        footer.center_children
+        footer = get_layout.add_max_panel({ ARG_SECTION => SECTION_FOOTER,
+                                            ARG_THEME => WadsBrightTheme.new })
+        footer.get_layout.add_text("I am the footer section", { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER})
     end
 
     def render_vertical_layout 
@@ -182,7 +172,8 @@ class ThemeTestDisplay < Widget
     def render_plot
         set_layout(LAYOUT_HEADER_CONTENT)
 
-        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_HEADER})
+        header = get_layout.add_max_panel({ ARG_SECTION => SECTION_HEADER,
+                                            ARG_THEME => WadsBrightTheme.new })
         # The zero x coord doesn't matter here because we center it below
         # Centering only adjusts the x coordinate
         header.add_text("This is a plot of sine (yellow) and cosine (pink) waves", 0, 35)
@@ -210,18 +201,24 @@ class ThemeTestDisplay < Widget
         content_panel = get_layout.add_max_panel({ ARG_SECTION => SECTION_CONTENT,
                                                    ARG_LAYOUT  => LAYOUT_EAST_WEST})
 
-        label_panel = content_panel.add_panel(LAYOUT_WEST)
+        label_panel = content_panel.add_panel(SECTION_WEST)
         label_panel.get_layout.add_text("First Name", { ARG_TEXT_ALIGN => TEXT_ALIGN_RIGHT})
         label_panel.get_layout.add_text("Middle Name", { ARG_TEXT_ALIGN => TEXT_ALIGN_RIGHT})
         label_panel.get_layout.add_text("Last Name", { ARG_TEXT_ALIGN => TEXT_ALIGN_RIGHT})
 
-        field_panel = content_panel.add_panel(LAYOUT_EAST)
-        field_panel.get_layout.add_text("John")
+        field_panel = content_panel.add_panel(SECTION_EAST)
+        @first_name = field_panel.get_layout.add_text_input(200, "")
         field_panel.get_layout.add_text("Michael")
         field_panel.get_layout.add_text("Doe")
 
     end
 
+    def handle_mouse_down mouse_x, mouse_y
+        # Mouse click: Select text field based on mouse position.
+        WadsConfig.instance.get_window.text_input = [@first_name].find { |tf| tf.under_point?(mouse_x, mouse_y) }
+        # Advanced: Move caret to clicked position
+        WadsConfig.instance.get_window.text_input.move_caret(mouse_x) unless WadsConfig.instance.get_window.text_input.nil?
+    end 
 end
 
 ThemeTestApp.new.show

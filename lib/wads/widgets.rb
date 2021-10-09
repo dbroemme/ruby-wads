@@ -530,7 +530,7 @@ module Wads
             end
 
             # Not all elements require padding
-            padding_exempt = [ELEMENT_IMAGE, ELEMENT_HORIZONTAL_PANEL,
+            padding_exempt = [ELEMENT_IMAGE, ELEMENT_HORIZONTAL_PANEL, ELEMENT_PLOT,
                 ELEMENT_VERTICAL_PANEL, ELEMENT_GENERIC, ELEMENT_MAX_PANEL].include? element_type
             if padding_exempt
                 # No padding

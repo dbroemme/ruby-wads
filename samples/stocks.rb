@@ -122,5 +122,5 @@ class StocksDisplay < Widget
     end 
 end
 
-WadsConfig.instance.set_current_theme(WadsBrightTheme.new)
+WadsConfig.instance.set_current_theme(WadsAquaTheme.new)
 SampleStocksApp.new.show

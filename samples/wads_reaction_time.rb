@@ -21,6 +21,7 @@ class ReactionTimeDisplay < Widget
     def initialize
         super(0, 0, 600, 400)
         set_layout(LAYOUT_HEADER_CONTENT, {ARG_DESIRED_HEIGHT => 60})
+        set_theme(WadsDarkRedBrownTheme.new)
         disable_border
         @next_light_count = 0
         @messages = []
@@ -37,8 +38,8 @@ class ReactionTimeDisplay < Widget
                                                      { ARG_TEXT_ALIGN => TEXT_ALIGN_CENTER,
                                                        ARG_USE_LARGE_FONT => true})
         
-        content_panel = get_layout.add_max_panel({ARG_LAYOUT => LAYOUT_EAST_WEST,
-                                                  ARG_SECTION => SECTION_CENTER,
+        content_panel = get_layout.add_max_panel({ARG_SECTION => SECTION_CENTER,
+                                                  ARG_LAYOUT => LAYOUT_EAST_WEST,
                                                   ARG_THEME => WadsDarkRedBrownTheme.new,
                                                   ARG_PANEL_WIDTH => 140})
         @traffic_light_image = content_panel.get_layout.add_image(@red_light,
@@ -108,8 +109,6 @@ class ReactionTimeDisplay < Widget
             @traffic_light_color = GAME_STATE_RED
         elsif @traffic_light_color < GAME_STATE_OVER
             @traffic_light_color = @traffic_light_color + 1
-        else 
-          puts "next light from #{@traffic_light_color}"
         end
         @mark_time = nil
     end

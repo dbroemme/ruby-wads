@@ -805,26 +805,6 @@ module Wads
             end
             container.get_coordinates(element_type, args)
         end
-
-        #
-        # This is a convenience method that creates a panel divided into a left and right,
-        # or east and west section. It will take up the entire space of the specified 
-        # ARG_SECTION in the args map.
-        #
-        def add_east_west_panel(args)
-            section = args[ARG_SECTION]
-            if section.nil?
-                raise "East west panels require the arg '#{ARG_SECTION}' with value #{@container_map.keys.join(', ')}"
-            end
-            container = @container_map[section]
-            new_panel = Panel.new(container.start_x, container.start_y,
-                                  container.max_width, container.max_height)
-            new_panel.set_layout(LAYOUT_EAST_WEST, args)
-            new_panel.base_z = @parent_widget.base_z
-            new_panel.disable_border
-            @parent_widget.add_child(new_panel)
-            new_panel
-        end
     end 
 
     # The layout sections are as follows:
@@ -841,9 +821,13 @@ module Wads
             super
             # Divide the height into 100, 100, and the middle gets everything else
             # Right now we are using 100 pixels rather than a percentage for the borders
-            middle_section_y_start = y + 100
-            height_middle_section = height - 100
-            @container_map[SECTION_NORTH] = GuiContainer.new(x, y, width, 100)
+            header_section_height = 100
+            if args[ARG_DESIRED_HEIGHT]
+                header_section_height = args[ARG_DESIRED_HEIGHT]
+            end
+            middle_section_y_start = y + header_section_height
+            height_middle_section = height - header_section_height
+            @container_map[SECTION_NORTH] = GuiContainer.new(x, y, width, header_section_height)
             @container_map[SECTION_CENTER] = GuiContainer.new(x, middle_section_y_start, width, height_middle_section, FILL_VERTICAL_STACK)
         end
     end 
@@ -1077,8 +1061,10 @@ module Wads
         end
 
         def add_panel(section, args = {})
-            get_layout.add_max_panel({ ARG_SECTION => section,
-                                       ARG_THEME => @gui_theme}.merge(args))
+            new_panel = get_layout.add_max_panel({ ARG_SECTION => section,
+                                                   ARG_THEME => @gui_theme}.merge(args))
+            new_panel.disable_border
+            new_panel
         end
 
         def get_theme 

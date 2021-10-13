@@ -116,7 +116,6 @@ class AppWindow < Gosu::Window
     Gosu::draw_line x1, y2, color, x2, y2, color, 1
     Gosu::draw_line x2, y1, color, x2, y2, color, 1
   end
-
 end
  
 AppWindow.new.show

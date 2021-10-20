@@ -17,3 +17,7 @@
 ## [0.2.0] - 2021-10-05
 
 - Breaking change in order to refactor, including standardizing order of widget constructor args
+
+## [0.2.3] - 2021-10-21
+
+- Upgrade dependency versions

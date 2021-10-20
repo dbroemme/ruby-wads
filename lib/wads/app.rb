@@ -16,6 +16,7 @@ module Wads
             WadsConfig.instance.set_window(self)
             set_display(widget) 
             WadsConfig.instance.set_log_level("info")
+            @registered_hold_down_buttons = []
         end 
 
         #
@@ -30,8 +31,23 @@ module Wads
             @main_widget
         end
 
+        # Register a key (identified by the Gosu id) to check if it is being held down.
+        # If so, the handle_key_held_down callback will be invoked on widgets
+        # For example, register_hold_down_key(Gosu::KbLeft)
+        def register_hold_down_key(id)
+            @registered_hold_down_buttons << id 
+        end
+
         def update
             @main_widget.update(@update_count, mouse_x, mouse_y)
+
+            # Look for keys that are held down and delegate those events
+            @registered_hold_down_buttons.each do |id|
+                if button_down?(id)
+                    @main_widget.handle_key_held_down id, mouse_x, mouse_y 
+                end
+            end
+
             @update_count = @update_count + 1
         end 
     

@@ -1019,6 +1019,14 @@ module Wads
             @text_input_fields = []
         end
 
+        def pad(str, size, left_align = false)
+            str = str.to_s
+            if left_align
+                str[0, size].ljust(size, ' ')
+            else
+                str[0, size].rjust(size, ' ')
+            end
+        end
         def debug(message)
             WadsConfig.instance.get_logger.debug message 
         end
@@ -1691,6 +1699,14 @@ module Wads
         end
 
         #
+        # This callback is invoked for any key registered by the
+        # register_hold_down_key(id) method.
+        #
+        def handle_key_held_down id, mouse_x, mouse_y
+            # empty base implementation
+        end
+
+        #
         # Override this method in your subclass to perform any logic needed
         # as part of the main Gosu update loop. In most cases, this method is
         # invoked 60 times per second.
@@ -1750,6 +1766,9 @@ module Wads
                 @img = Gosu::Image.new(image)
             elsif image.is_a? Gosu::Image 
                 @img = image 
+            elsif image.is_a? Gosu::Color
+                @img = nil
+                @override_color = image
             else 
                 raise "ImageWidget requires either a filename or a Gosu::Image object"
             end
@@ -1759,11 +1778,16 @@ module Wads
             @scale = 1
             disable_border
             disable_background
-            set_dimensions(@img.width, @img.height)
+            set_dimensions(@img.width, @img.height) if @img
         end
 
         def render 
-            @img.draw @x, @y, z_order, @scale, @scale
+            if @img.nil?
+                # TODO draw a box
+                Gosu::draw_rect(@x, @y, @width - 1, @height - 1, @override_color, relative_z_order(Z_ORDER_GRAPHIC_ELEMENTS))
+            else
+                @img.draw @x, @y, z_order, @scale, @scale
+            end
         end
 
         def widget_z 

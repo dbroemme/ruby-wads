@@ -21,3 +21,8 @@
 ## [0.2.3] - 2021-10-21
 
 - Upgrade dependency versions
+
+## [0.2.4] - 2021-10-21
+
+- Add a callback for key up
+

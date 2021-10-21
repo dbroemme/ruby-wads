@@ -1454,6 +1454,11 @@ module Wads
                 if not result.nil? and result.is_a? WidgetResult
                     return result 
                 end
+            else 
+                result = handle_key_up id, mouse_x, mouse_y
+                if not result.nil? and result.is_a? WidgetResult
+                    return result 
+                end
             end
 
             @children.each do |child| 
@@ -1464,6 +1469,11 @@ module Wads
                             return result 
                         end
                     end 
+                else 
+                    result = handle_key_up id, mouse_x, mouse_y
+                    if not result.nil? and result.is_a? WidgetResult
+                        return result 
+                    end
                 end
             end
         end
@@ -1703,6 +1713,17 @@ module Wads
         # register_hold_down_key(id) method.
         #
         def handle_key_held_down id, mouse_x, mouse_y
+            # empty base implementation
+        end
+
+        #
+        # Override this method in your subclass to process when a key is released.
+        # The base implementation is empty.
+        # Note that the mouse was not necessarily positioned over this widget.
+        # You can check this using the contains_click(mouse_x, mouse_y) method
+        # and decide if you want to process the event based on that, if desired.
+        #
+        def handle_key_up id, mouse_x, mouse_y
             # empty base implementation
         end
 
